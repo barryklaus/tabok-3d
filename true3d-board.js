@@ -351,7 +351,9 @@ export class TabokTrue3DBoard {
       const mesh = new THREE.Mesh(geometry, [sideMaterials[cell.type], topMaterials[cell.type], sideMaterials[cell.type]]);
       mesh.position.copy(worldFor(id));
       mesh.position.y = cell.type === 'B' ? .06 : .02;
-      mesh.rotation.y = Math.PI / 6;
+      // CylinderGeometry starts point-top, matching TABOK's original board and
+      // the axial coordinate spacing used by worldFor().
+      mesh.rotation.y = 0;
       mesh.receiveShadow = true;
       mesh.castShadow = cell.type !== 'B';
       mesh.userData = { id, playable };
@@ -605,6 +607,8 @@ export class TabokTrue3DBoard {
       new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: actor.active ? .72 : .25, roughness: .4, metalness: .5 })
     );
     base.position.y = .12;
+    // CylinderGeometry is point-top by default, matching the original board.
+    base.rotation.y = 0;
     base.castShadow = base.receiveShadow = true;
     group.add(base);
     let sprite, groundY=.15;
@@ -666,12 +670,15 @@ export class TabokTrue3DBoard {
     });
     state.legal.forEach((id, index) => {
       const color = new THREE.Color(index === 0 ? 0xffffff : state.turnColor || '#ffd36b');
+      const geometry = new THREE.RingGeometry(.52, .69, 6);
+      geometry.rotateX(-Math.PI / 2);
       const ring = new THREE.Mesh(
-        new THREE.RingGeometry(.52, .69, 6),
+        geometry,
         new THREE.MeshBasicMaterial({ color, transparent: true, opacity: .88, side: THREE.DoubleSide, depthWrite: false })
       );
-      ring.rotation.x = -Math.PI / 2;
-      ring.rotation.z = Math.PI / 6;
+      // Rotate around the board's vertical axis; rotating the original plane's
+      // Z axis produced the visibly mismatched hex angle at oblique views.
+      ring.rotation.y = Math.PI / 6;
       ring.position.copy(worldFor(id));
       ring.position.y = .25;
       ring.userData.id = id;

@@ -1,7 +1,13 @@
 # TABOK — True 3D Board Alpha
 
-Version: **v0.41.1 True 3D Alpha — Displaced Ruins**  
-Build: **2026.09.04.D1**
+Version: **v0.41.2 True 3D Alpha — Hex Lock**  
+Build: **2026.09.04.H1**
+
+### Hex Lock correction
+
+- Board tiles and Character/Monster plinths now preserve TABOK's original point-top orientation, with a vertex at the top and bottom.
+- Legal-movement outlines are rotated around the board's vertical world axis to match those point-top hexes at every camera angle.
+- Verified against the original point-top reference in both direct top view and low 3D perspective.
 
 ### Displaced Ruins upgrade
 
