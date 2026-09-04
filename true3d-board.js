@@ -75,7 +75,7 @@ function makePortalRuneTexture() {
     [[-.68,-.7],[.68,-.7],[-.42,.1],[.48,.1],[-.68,.72],[.68,.72]]
   ];
   for (let i = 0; i < 20; i++) {
-    const angle = i / 20 * Math.PI * 2, radius = 390;
+    const angle = i / 20 * Math.PI * 2, radius = 466;
     ctx.save();
     ctx.translate(cx + Math.sin(angle) * radius, cy - Math.cos(angle) * radius);
     ctx.rotate(angle);
@@ -213,6 +213,39 @@ const PORTAL_MIST_FRAGMENT = `
     float alpha=edge*(.12+tongues*.48+turbulence*.26)*uPower;
     vec3 color=mix(uColorA,uColorB,tongues);
     gl_FragColor=vec4(color,alpha*.72);
+  }
+`;
+
+const DOME_VERTEX = `
+  varying vec2 vUv;
+  varying vec3 vNormalView;
+  varying vec3 vViewDirection;
+  void main(){
+    vUv=uv;
+    vec4 viewPosition=modelViewMatrix*vec4(position,1.0);
+    vNormalView=normalize(normalMatrix*normal);
+    vViewDirection=normalize(-viewPosition.xyz);
+    gl_Position=projectionMatrix*viewPosition;
+  }
+`;
+
+const DOME_FRAGMENT = `
+  uniform float uTime;
+  uniform float uPower;
+  uniform vec3 uColor;
+  varying vec2 vUv;
+  varying vec3 vNormalView;
+  varying vec3 vViewDirection;
+  void main(){
+    float facing=max(dot(normalize(vNormalView),normalize(vViewDirection)),0.0);
+    float fresnel=pow(1.0-facing,2.35);
+    float branchA=pow(1.0-abs(sin(vUv.x*35.0+sin(vUv.y*19.0+uTime*.9)*2.2)),42.0);
+    float branchB=pow(1.0-abs(sin((vUv.x+vUv.y)*26.0-cos(vUv.x*17.0-uTime*.7)*1.8)),48.0);
+    float pulse=.78+.22*sin(uTime*2.1+vUv.y*8.0);
+    float lightning=(branchA+branchB)*(.12+fresnel*.38)*pulse;
+    float alpha=(.035+fresnel*.29+lightning*.72)*uPower;
+    vec3 color=uColor*(.34+fresnel*1.28+lightning*2.35);
+    gl_FragColor=vec4(color,clamp(alpha,0.0,.72));
   }
 `;
 
@@ -460,7 +493,7 @@ export class TabokTrue3DBoard {
   makePortal() {
     this.portal = new THREE.Group();
     const well = new THREE.Mesh(
-      new THREE.CylinderGeometry(2.5, 2.62, .34, 64),
+      new THREE.CylinderGeometry(2.06, 2.1, .28, 64),
       new THREE.MeshStandardMaterial({ color: 0x100b0e, bumpMap: this.stoneHeightTexture, bumpScale: .06, roughness: .82, metalness: .28 })
     );
     well.position.y = .08;
@@ -474,14 +507,14 @@ export class TabokTrue3DBoard {
     });
     const segmentCount = 20, span = Math.PI * 2 / segmentCount * .91;
     const stones = new THREE.InstancedMesh(
-      annularSegmentGeometry(1.78, 2.5, span, .3),
+      annularSegmentGeometry(1.78, 2.06, span, .22),
       this.portalStoneMaterial,
       segmentCount
     );
     const transform = new THREE.Matrix4();
     for (let i = 0; i < segmentCount; i++) {
       transform.makeRotationY(i / segmentCount * Math.PI * 2);
-      transform.setPosition(0, .48 + (i % 3 === 0 ? .025 : 0), 0);
+      transform.setPosition(0, .45 + (i % 3 === 0 ? .018 : 0), 0);
       stones.setMatrixAt(i, transform);
     }
     stones.castShadow = stones.receiveShadow = true;
@@ -502,12 +535,12 @@ export class TabokTrue3DBoard {
       metalness: .1,
       side: THREE.DoubleSide
     });
-    const capGeometry = new THREE.RingGeometry(1.82, 2.46, 8, 4, -span / 2, span);
+    const capGeometry = new THREE.RingGeometry(1.8, 2.025, 8, 4, -span / 2, span);
     capGeometry.rotateX(-Math.PI / 2);
     this.portalCaps = new THREE.InstancedMesh(capGeometry, this.portalCapMaterial, segmentCount);
     for (let i = 0; i < segmentCount; i++) {
       transform.makeRotationY(i / segmentCount * Math.PI * 2);
-      transform.setPosition(0, .525 + (i % 3 === 0 ? .025 : 0), 0);
+      transform.setPosition(0, .485 + (i % 3 === 0 ? .018 : 0), 0);
       this.portalCaps.setMatrixAt(i, transform);
     }
     this.portalCaps.receiveShadow = true;
@@ -520,12 +553,12 @@ export class TabokTrue3DBoard {
       emissiveIntensity: .14, roughness: .82, metalness: .2
     });
     this.portalLips = [
-      new THREE.Mesh(new THREE.TorusGeometry(1.79, .095, 8, 96), lipMaterial),
-      new THREE.Mesh(new THREE.TorusGeometry(2.49, .075, 8, 96), lipMaterial)
+      new THREE.Mesh(new THREE.TorusGeometry(1.765, .06, 8, 96), lipMaterial),
+      new THREE.Mesh(new THREE.TorusGeometry(2.04, .045, 8, 96), lipMaterial)
     ];
     this.portalLips.forEach(lip => {
       lip.rotation.x = Math.PI / 2;
-      lip.position.y = .48;
+      lip.position.y = .47;
       lip.castShadow = lip.receiveShadow = true;
       lip.userData.pickPortal = true;
       this.portal.add(lip);
@@ -536,12 +569,12 @@ export class TabokTrue3DBoard {
       depthWrite: false, blending: THREE.AdditiveBlending
     });
     this.portalEnergyRims = [
-      new THREE.Mesh(new THREE.TorusGeometry(1.765, .026, 6, 96), this.portalEnergyMaterial),
-      new THREE.Mesh(new THREE.TorusGeometry(2.465, .018, 6, 96), this.portalEnergyMaterial)
+      new THREE.Mesh(new THREE.TorusGeometry(1.75, .02, 6, 96), this.portalEnergyMaterial),
+      new THREE.Mesh(new THREE.TorusGeometry(2.015, .014, 6, 96), this.portalEnergyMaterial)
     ];
     this.portalEnergyRims.forEach(rim => {
       rim.rotation.x = Math.PI / 2;
-      rim.position.y = .55;
+      rim.position.y = .505;
       this.portal.add(rim);
     });
 
@@ -554,7 +587,7 @@ export class TabokTrue3DBoard {
       },
       side: THREE.DoubleSide
     });
-    this.portalVortex = new THREE.Mesh(new THREE.CircleGeometry(1.79, 96), this.portalVortexMaterial);
+    this.portalVortex = new THREE.Mesh(new THREE.CircleGeometry(1.76, 96), this.portalVortexMaterial);
     this.portalVortex.rotation.x = -Math.PI / 2;
     this.portalVortex.position.y = .35;
     this.portalVortex.userData.pickPortal = true;
@@ -570,7 +603,7 @@ export class TabokTrue3DBoard {
       transparent: true, depthWrite: false, side: THREE.DoubleSide,
       blending: THREE.AdditiveBlending
     });
-    this.portalMist = new THREE.Mesh(new THREE.CircleGeometry(2.03, 96), this.portalMistMaterial);
+    this.portalMist = new THREE.Mesh(new THREE.CircleGeometry(1.88, 96), this.portalMistMaterial);
     this.portalMist.rotation.x = -Math.PI / 2;
     this.portalMist.position.y = .53;
     this.portal.add(this.portalMist);
@@ -580,28 +613,41 @@ export class TabokTrue3DBoard {
       opacity: .9, depthWrite: false, side: THREE.DoubleSide,
       blending: THREE.AdditiveBlending
     });
-    this.portalRunes = new THREE.Mesh(new THREE.CircleGeometry(2.48, 96), this.portalRuneMaterial);
+    this.portalRunes = new THREE.Mesh(new THREE.CircleGeometry(2.035, 96), this.portalRuneMaterial);
     this.portalRunes.rotation.x = -Math.PI / 2;
-    this.portalRunes.position.y = .535;
+    this.portalRunes.position.y = .505;
     this.portal.add(this.portalRunes);
 
-    this.portalKeystones = [];
-    const keystoneGeometry = new THREE.BoxGeometry(.72, .3, .82, 4, 2, 4);
-    const keystoneMaterial = new THREE.MeshStandardMaterial({
-      map: this.textures.wall, displacementMap: this.stoneHeightTexture,
-      displacementScale: .035, displacementBias: -.012,
-      bumpMap: this.stoneHeightTexture, bumpScale: .065,
-      color: 0x665166, emissive: 0x501173,
-      emissiveIntensity: .42, roughness: .78, metalness: .18
+    this.portalDomeMaterial = new THREE.ShaderMaterial({
+      vertexShader: DOME_VERTEX,
+      fragmentShader: DOME_FRAGMENT,
+      uniforms: {
+        uTime: { value: 0 }, uPower: { value: 1 },
+        uColor: { value: new THREE.Color(0xc95cff) }
+      },
+      transparent: true, depthWrite: false, side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending
     });
-    for (let i = 0; i < 4; i++) {
-      const angle = i * Math.PI / 2, stone = new THREE.Mesh(keystoneGeometry, keystoneMaterial);
-      stone.position.set(Math.sin(angle) * 2.47, .52, Math.cos(angle) * 2.47);
-      stone.rotation.y = angle;
-      stone.castShadow = stone.receiveShadow = true;
-      stone.userData.pickPortal = true;
-      this.portal.add(stone);
-      this.portalKeystones.push(stone);
+    this.portalDome = new THREE.Mesh(
+      new THREE.SphereGeometry(1.74, 48, 18, 0, Math.PI * 2, 0, Math.PI / 2),
+      this.portalDomeMaterial
+    );
+    this.portalDome.position.y = .48;
+    this.portalDome.userData.pickPortal = true;
+    this.portal.add(this.portalDome);
+
+    this.portalArcs = [];
+    for (let i = 0; i < 7; i++) {
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(8 * 3), 3));
+      const material = new THREE.LineBasicMaterial({
+        color: 0xef9cff, transparent: true, opacity: .78,
+        depthWrite: false, blending: THREE.AdditiveBlending
+      });
+      const arc = new THREE.Line(geometry, material);
+      arc.userData.phase = i / 7 * Math.PI * 2;
+      this.portal.add(arc);
+      this.portalArcs.push(arc);
     }
 
     this.portalDebris = [];
@@ -629,8 +675,8 @@ export class TabokTrue3DBoard {
     this.scene.add(this.portalSpotlight, this.portalSpotlight.target);
     this.portal.userData.pickPortal = true;
     this.scene.add(this.portal);
-    this.pickables.push(well, stones, this.portalCaps, this.portalVortex, ...this.portalLips, ...this.portalKeystones);
-    [well, stones, this.portalCaps, this.portalVortex, ...this.portalLips, ...this.portalKeystones].forEach(mesh => { mesh.userData.pickPortal = true; });
+    this.pickables.push(well, stones, this.portalCaps, this.portalVortex, this.portalDome, ...this.portalLips);
+    [well, stones, this.portalCaps, this.portalVortex, this.portalDome, ...this.portalLips].forEach(mesh => { mesh.userData.pickPortal = true; });
   }
 
   bindInput() {
@@ -679,19 +725,93 @@ export class TabokTrue3DBoard {
     return sprite;
   }
 
+  makeEquipment(type) {
+    const group = new THREE.Group();
+    const bronze = new THREE.MeshStandardMaterial({ color: 0x9d6428, roughness: .38, metalness: .78 });
+    const gold = new THREE.MeshStandardMaterial({ color: 0xe3b454, roughness: .3, metalness: .86 });
+    const teal = new THREE.MeshStandardMaterial({ color: 0x176f75, roughness: .44, metalness: .62 });
+    if (type === 'S') {
+      const plate = new THREE.Mesh(new THREE.CylinderGeometry(.25, .25, .075, 12, 1, false), bronze);
+      plate.rotation.x = Math.PI / 2;
+      plate.position.y = .31;
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(.245, .027, 6, 12), gold);
+      rim.position.set(0, .31, .045);
+      const boss = new THREE.Mesh(new THREE.SphereGeometry(.075, 12, 7), gold);
+      boss.scale.z = .45;
+      boss.position.set(0, .31, .075);
+      const spokeA = new THREE.Mesh(new THREE.BoxGeometry(.32, .028, .035), gold);
+      const spokeB = spokeA.clone();
+      spokeA.position.set(0, .31, .073);
+      spokeB.position.set(0, .31, .073);
+      spokeB.rotation.z = Math.PI / 2;
+      group.add(plate, rim, boss, spokeA, spokeB);
+    } else {
+      const torso = new THREE.Mesh(new THREE.CylinderGeometry(.155, .23, .34, 6), teal);
+      torso.position.y = .31;
+      const collar = new THREE.Mesh(new THREE.TorusGeometry(.13, .025, 6, 12), gold);
+      collar.rotation.x = Math.PI / 2;
+      collar.position.y = .49;
+      const skirt = new THREE.Mesh(new THREE.ConeGeometry(.235, .19, 6, 1, true), bronze);
+      skirt.position.y = .1;
+      const shoulderGeometry = new THREE.SphereGeometry(.095, 10, 6);
+      const left = new THREE.Mesh(shoulderGeometry, gold);
+      const right = left.clone();
+      left.scale.set(1.25, .72, .9);
+      right.scale.copy(left.scale);
+      left.position.set(-.19, .42, 0);
+      right.position.set(.19, .42, 0);
+      const chest = new THREE.Mesh(new THREE.BoxGeometry(.05, .25, .025), gold);
+      chest.position.set(0, .31, .16);
+      group.add(torso, collar, skirt, left, right, chest);
+    }
+    group.traverse(node => {
+      if (!node.isMesh) return;
+      node.castShadow = node.receiveShadow = true;
+    });
+    group.rotation.y = -.24;
+    return group;
+  }
+
   makeActor(actor) {
     const group = new THREE.Group();
     const major = actor.major;
     const color = new THREE.Color(actor.color || (major ? '#d842db' : '#ef4f9c'));
+    const radius = major ? .68 : .5;
     const base = new THREE.Mesh(
-      new THREE.CylinderGeometry(major ? .68 : .5, major ? .72 : .54, .16, 6),
-      new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: actor.active ? .72 : .25, roughness: .4, metalness: .5 })
+      new THREE.CylinderGeometry(radius * .96, radius, .15, 6),
+      new THREE.MeshStandardMaterial({
+        map: this.textures.wall, bumpMap: this.stoneHeightTexture, bumpScale: .07,
+        color: major ? 0x332333 : 0x4a4039, roughness: .86, metalness: .12
+      })
     );
     base.position.y = .12;
     // CylinderGeometry is point-top by default, matching the original board.
     base.rotation.y = 0;
     base.castShadow = base.receiveShadow = true;
     group.add(base);
+    const inset = new THREE.Mesh(
+      new THREE.CylinderGeometry(radius * .79, radius * .82, .035, 6),
+      new THREE.MeshStandardMaterial({
+        color: 0x171319, emissive: color,
+        emissiveIntensity: actor.active ? .2 : .085, roughness: .62, metalness: .34
+      })
+    );
+    inset.position.y = .205;
+    inset.rotation.y = 0;
+    inset.castShadow = inset.receiveShadow = true;
+    group.add(inset);
+    const trimGeometry = new THREE.RingGeometry(radius * .81, radius * .91, 6);
+    trimGeometry.rotateX(-Math.PI / 2);
+    const trim = new THREE.Mesh(
+      trimGeometry,
+      new THREE.MeshStandardMaterial({
+        color, emissive: color, emissiveIntensity: actor.active ? .28 : .13,
+        roughness: .42, metalness: .72, side: THREE.DoubleSide
+      })
+    );
+    trim.rotation.y = Math.PI / 6;
+    trim.position.y = .228;
+    group.add(trim);
     let sprite, groundY=.15;
     if (actor.kind === 'player') sprite = this.makeSprite(PLAYER_ART[actor.charId] || PLAYER_ART.misty, 1.18, 1.65);
     else if (major) sprite = this.makeSprite('assets/major-monster-fullbody-v1.png', 1.8, 2.65);
@@ -732,11 +852,11 @@ export class TabokTrue3DBoard {
     state.players.forEach(player => this.makeActor({ ...player, kind: 'player' }));
     state.monsters.forEach(monster => this.makeActor({ ...monster, kind: 'monster' }));
     state.equipment.forEach(([pos, items]) => items.forEach((item, index) => {
-      const sprite = this.makeSprite(item === 'S' ? 'assets/shield-isolated.png' : 'assets/armor-isolated.png', .62, .76, .08);
-      sprite.position.copy(worldFor(pos));
-      sprite.position.x += (index - (items.length - 1) / 2) * .32;
-      sprite.position.y = .2;
-      this.itemRoot.add(sprite);
+      const equipment = this.makeEquipment(item);
+      equipment.position.copy(worldFor(pos));
+      equipment.position.x += (index - (items.length - 1) / 2) * .34;
+      equipment.position.y = .2;
+      this.itemRoot.add(equipment);
     }));
     state.runes.forEach(([pos, count]) => {
       if (count < 1) return;
@@ -790,6 +910,9 @@ export class TabokTrue3DBoard {
       const enabled = enabledLights === 6 || (enabledLights === 4 ? index !== 1 && index !== 4 : index % 2 === 0);
       entry.light.visible = enabled;
       entry.glow.material.opacity = enabled ? .7 : .22;
+    });
+    this.portalArcs?.forEach((arc, index) => {
+      arc.visible = quality === 'full' || quality === 'auto' || index % 2 === 0;
     });
     if (this.portalCapMaterial) {
       this.portalCapMaterial.displacementScale = quality === 'ultra' ? .035 : quality === 'lite' ? .065 : .105;
@@ -861,17 +984,36 @@ export class TabokTrue3DBoard {
     this.portalSpotlight.intensity += (look[0] * .74 - this.portalSpotlight.intensity) * .045;
     this.portalVortexMaterial.uniforms.uTime.value = time;
     this.portalMistMaterial.uniforms.uTime.value = time;
+    this.portalDomeMaterial.uniforms.uTime.value = time;
     this.portalVortexMaterial.uniforms.uPower.value += (look[1] - this.portalVortexMaterial.uniforms.uPower.value) * .045;
     this.portalMistMaterial.uniforms.uPower.value = this.portalVortexMaterial.uniforms.uPower.value;
+    this.portalDomeMaterial.uniforms.uPower.value = .82 + (this.portalVortexMaterial.uniforms.uPower.value - 1) * .32;
     const colorA = look[2], colorB = look[3];
     this.portalVortexMaterial.uniforms.uColorA.value.lerp(colorA, .04);
     this.portalVortexMaterial.uniforms.uColorB.value.lerp(colorB, .04);
     this.portalMistMaterial.uniforms.uColorA.value.copy(this.portalVortexMaterial.uniforms.uColorA.value);
     this.portalMistMaterial.uniforms.uColorB.value.copy(this.portalVortexMaterial.uniforms.uColorB.value);
+    this.portalDomeMaterial.uniforms.uColor.value.lerp(colorB, .045);
     this.portalRuneMaterial.color.lerp(colorB, .045);
     this.portalRuneMaterial.opacity = .76 + Math.sin(time * 2.35) * .16;
     this.portalEnergyMaterial.color.lerp(colorB, .045);
     this.portalEnergyMaterial.opacity = .64 + Math.sin(time * 2.9) * .2;
+    this.portalArcs.forEach((arc, index) => {
+      arc.material.color.lerp(colorB, .08);
+      arc.material.opacity = .48 + Math.sin(time * 11.7 + index * 1.9) * .28;
+      const positions = arc.geometry.attributes.position.array;
+      const phase = arc.userData.phase + time * (.08 + index * .004);
+      for (let point = 0; point < 8; point++) {
+        const progress = point / 7;
+        const angle = phase + (progress - .5) * .22;
+        const jitter = Math.sin(time * 23 + point * 7.3 + index * 3.1) * .026;
+        const radius = 1.79 + jitter;
+        positions[point * 3] = Math.sin(angle) * radius;
+        positions[point * 3 + 1] = .54 + Math.sin(progress * Math.PI) * (.12 + .05 * Math.sin(time * 8 + index));
+        positions[point * 3 + 2] = Math.cos(angle) * radius;
+      }
+      arc.geometry.attributes.position.needsUpdate = true;
+    });
     this.portalStoneMaterial.emissive.lerp(colorA, .035);
     this.portalStoneMaterial.emissiveIntensity = .06 + look[1] * .07 + Math.sin(time * 1.7) * .025;
     this.portalCapMaterial.emissive.lerp(colorA, .035);

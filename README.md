@@ -1,7 +1,16 @@
 # TABOK — True 3D Board Alpha
 
-Version: **v0.42.1 True 3D Alpha — Temple Light**
-Build: **2026.09.04.L2**
+Version: **v0.43.0 True 3D Alpha — Veil Dome**
+Build: **2026.09.04.V1**
+
+### Veil Dome and modeled tokens
+
+- Narrows the Portal architecture to a slim segmented bezel so it no longer obscures nearby playable hexes.
+- Removes the four oversized square keystones and centers twenty brighter rune glyphs within the new bezel.
+- Adds a translucent half-sphere force field with Fresnel edge glow, branching energy traces, and seven tiny procedural lightning arcs.
+- Replaces neon Traveler and Monster bases with grounded, textured stone hex plinths and restrained metallic color inlays.
+- Replaces flat Armor and Shield sprites with compact illuminated 3D models that receive the Temple lighting and cast real shadows.
+- Scales dome lightning by the board quality setting to preserve the Ultra Performance target.
 
 ### Dramatic Temple Light pass
 
