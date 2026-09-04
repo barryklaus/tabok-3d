@@ -2,7 +2,7 @@
 (() => {
   'use strict';
 
-  const VERSION = 'v0.43.1 Private Rolls · P1';
+  const VERSION = 'v0.44.0 Living Tokens · L1';
   const TOKEN_KEY = 'tabok-multiplayer-token';
   const NAME_KEY = 'tabok-multiplayer-name';
   const NETWORK = window.TABOK_NETWORK || {};
@@ -622,6 +622,16 @@
   function localOwnsSlot(slot) { return seatForSlot(slot)?.owner === token; }
   function localOwnsActive() { return !!(game && active() && localOwnsSlot(active().p)); }
   function localCanViewTurnRoll(player = active()) { return !!(room?.phase === 'game' && game?.phase === 'roll' && player?.controller === 'human' && localOwnsSlot(player.p)); }
+  function route3DHex(id) {
+    if (!room || room.phase !== 'game') return false;
+    if (!localOwnsActive()) { showRoomNotice('Waiting for the assigned Traveler on their device.'); return true; }
+    if (isHost) {
+      document.querySelector('.playable[data-id="'+cssEscape(id)+'"]')?.click();
+    } else {
+      sendToHost('command', {command:{kind:'board', id}});
+    }
+    return true;
+  }
   function challengedSlot() {
     const alert = els.messageBody.querySelector('.challenge-player-alert strong');
     const match = alert?.textContent.match(/\bP[1-6]\b/);
@@ -726,5 +736,6 @@
   renderLanding();
   setPill('MULTIPLAYER READY','waiting');
   window.TabokCanViewTurnRoll=localCanViewTurnRoll;
+  window.TabokRoute3DHex=route3DHex;
   window.TabokMultiplayer={get room(){return room},get isHost(){return isHost},canViewActiveRoll:localCanViewTurnRoll,version:VERSION};
 })();

@@ -1,6 +1,14 @@
 # TABOK — True 3D Board Alpha
 
-Version: **v0.43.1 True 3D Alpha — Private Rolls**
+Version: **v0.44.0 True 3D Alpha — Living Tokens**
+
+## Living board interactions
+
+- Riftwalk destinations can be selected directly on the interactive 3D board, including from a remote Human player's device.
+- Travelers and Monsters glide across the floor instead of hopping above it.
+- Every occupied hex receives a restrained, color-matched glow beneath its actor.
+- Rune Dice use textured astral stone, luminous inner crystal, and metallic edge detailing.
+- Modeled Armor and Shield pickups now rotate and hover gently like the Rune Dice.
 
 ## Private turn rolls
 

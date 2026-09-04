@@ -769,7 +769,58 @@ export class TabokTrue3DBoard {
       node.castShadow = node.receiveShadow = true;
     });
     group.rotation.y = -.24;
+    group.userData.equipment = true;
     return group;
+  }
+
+  makeRuneDie() {
+    const group = new THREE.Group();
+    const geometry = new THREE.DodecahedronGeometry(.29, 0);
+    const stone = new THREE.Mesh(
+      geometry,
+      new THREE.MeshStandardMaterial({
+        map: this.textures.P, color: 0x5a397a, emissive: 0x35105f,
+        emissiveIntensity: .42, roughness: .68, metalness: .28
+      })
+    );
+    const inner = new THREE.Mesh(
+      geometry,
+      new THREE.MeshBasicMaterial({
+        color: 0xb974ff, transparent: true, opacity: .2,
+        blending: THREE.AdditiveBlending, depthWrite: false
+      })
+    );
+    inner.scale.setScalar(.82);
+    const edges = new THREE.LineSegments(
+      new THREE.EdgesGeometry(geometry, 12),
+      new THREE.LineBasicMaterial({ color: 0xe4b8ff, transparent: true, opacity: .82 })
+    );
+    group.add(stone, inner, edges);
+    group.traverse(node => { if (node.isMesh) node.castShadow = node.receiveShadow = true; });
+    group.userData.rune = true;
+    return group;
+  }
+
+  makeOccupancyGlow(actor) {
+    const major = actor.kind === 'monster' && actor.major;
+    const radius = major ? .8 : actor.kind === 'monster' ? .66 : .61;
+    const color = new THREE.Color(actor.kind === 'player' ? actor.color : major ? '#d95cff' : '#ff526d');
+    const geometry = new THREE.RingGeometry(radius * .7, radius, 6);
+    geometry.rotateX(-Math.PI / 2);
+    const glow = new THREE.Mesh(
+      geometry,
+      new THREE.MeshBasicMaterial({
+        color, transparent: true, opacity: major ? .48 : .35,
+        side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending
+      })
+    );
+    glow.rotation.y = Math.PI / 6;
+    glow.position.copy(worldFor(actor.pos));
+    glow.position.y = .135;
+    glow.userData.occupancy = true;
+    glow.userData.baseOpacity = major ? .48 : .35;
+    glow.userData.phase = actor.id.length * .73 + actor.pos.length * .19;
+    this.highlightRoot.add(glow);
   }
 
   makeActor(actor) {
@@ -849,8 +900,8 @@ export class TabokTrue3DBoard {
     this.clearGroup(this.itemRoot);
     this.clearGroup(this.highlightRoot);
     this.actors.clear();
-    state.players.forEach(player => this.makeActor({ ...player, kind: 'player' }));
-    state.monsters.forEach(monster => this.makeActor({ ...monster, kind: 'monster' }));
+    state.players.forEach(player => { const actor = { ...player, kind: 'player' }; this.makeActor(actor); this.makeOccupancyGlow(actor); });
+    state.monsters.forEach(monster => { const actor = { ...monster, kind: 'monster' }; this.makeActor(actor); this.makeOccupancyGlow(actor); });
     state.equipment.forEach(([pos, items]) => items.forEach((item, index) => {
       const equipment = this.makeEquipment(item);
       equipment.position.copy(worldFor(pos));
@@ -860,13 +911,9 @@ export class TabokTrue3DBoard {
     }));
     state.runes.forEach(([pos, count]) => {
       if (count < 1) return;
-      const die = new THREE.Mesh(
-        new THREE.DodecahedronGeometry(.28, 0),
-        new THREE.MeshStandardMaterial({ color: 0x7652c8, emissive: 0x6d3ddb, emissiveIntensity: 1.3, roughness: .32, metalness: .48 })
-      );
+      const die = this.makeRuneDie();
       die.position.copy(worldFor(pos));
       die.position.y = .55;
-      die.userData.rune = true;
       this.itemRoot.add(die);
     });
     state.legal.forEach((id, index) => {
@@ -943,7 +990,6 @@ export class TabokTrue3DBoard {
         const t = Math.min(1, (now - started) / duration);
         const eased = t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
         actor.position.lerpVectors(start, end, eased);
-        actor.position.y += Math.sin(Math.PI * eased) * .58;
         if (t < 1) requestAnimationFrame(step); else { actor.position.copy(end); resolve(); }
       };
       requestAnimationFrame(step);
@@ -1026,7 +1072,20 @@ export class TabokTrue3DBoard {
       shard.rotation.set(time * (.18 + index * .007), time * (.25 - index * .005), time * .12);
     });
     this.itemRoot.children.forEach((item, index) => {
-      if (item.userData.rune) { item.rotation.y = time * .72 + index; item.position.y = .5 + Math.sin(time * 1.8 + index) * .09; }
+      if (item.userData.rune) {
+        item.rotation.y = time * .72 + index;
+        item.rotation.x = .18 + Math.sin(time * .58 + index) * .08;
+        item.position.y = .5 + Math.sin(time * 1.8 + index) * .055;
+      } else if (item.userData.equipment) {
+        item.rotation.y = time * .82 + index * 1.7;
+        item.position.y = .2 + Math.sin(time * 1.55 + index) * .035;
+      }
+    });
+    this.highlightRoot.children.forEach(glow => {
+      if (!glow.userData.occupancy) return;
+      const pulse = .88 + Math.sin(time * 2.6 + glow.userData.phase) * .08;
+      glow.scale.setScalar(pulse);
+      glow.material.opacity = glow.userData.baseOpacity * (.86 + Math.sin(time * 2.6 + glow.userData.phase) * .14);
     });
     this.renderer.render(this.scene, this.camera);
   }
