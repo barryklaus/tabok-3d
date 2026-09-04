@@ -1,7 +1,22 @@
 # TABOK — True 3D Board Alpha
 
-Version: **v0.41.2 True 3D Alpha — Hex Lock**  
-Build: **2026.09.04.H1**
+Version: **v0.42.1 True 3D Alpha — Temple Light**
+Build: **2026.09.04.L2**
+
+### Dramatic Temple Light pass
+
+- Rebalances the arena around deep ambient shadow, a sharp cold overhead key, and a violet opposing rim light.
+- Adds six localized warm entrance torches with subtle non-random flame and glow animation.
+- Adds a color-reactive overhead Portal spotlight that changes with rejection, Reckoning, and Crossing states.
+- Uses soft contact shadows and filmic highlight control while preserving tile readability.
+- Ultra Performance activates three evenly spaced torch lights; Auto uses four; High Fidelity uses all six.
+
+### Living Stone material pass
+
+- Preserves the exact point-top hex meshes, coordinates, spacing, and movement hit areas from Hex Lock.
+- Replaces flat-looking tile color with optimized limestone, oxidized teal stone, and corrupted obsidian materials.
+- Uses six deterministic rotations and tiny tone variations per material to break visible repetition without changing multiplayer state.
+- Adds texture-driven roughness, stronger stone relief, dark beveled sides, worn brass traces, and restrained portal corruption.
 
 ### Hex Lock correction
 

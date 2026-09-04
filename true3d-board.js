@@ -5,11 +5,13 @@ const SQRT3 = Math.sqrt(3);
 const HEX_RADIUS = .72;
 const PORTAL_R = 2.08;
 const COLORS = { P: 0xa979c4, T: 0x55a8a0, G: 0xb1aa9c, B: 0x211d19, W: 0xe0c68e };
+const TILE_TINTS = { P: 0xe2d9e7, T: 0xc7d7d0, G: 0xd9d0c1, B: 0x4b4239, W: 0xf0dfbd };
+const TILE_SIDES = { P: 0x211627, T: 0x142724, G: 0x29251f, B: 0x080706, W: 0x49371f };
 const PORTAL_LOOKS = {
-  idle: [16, 1, new THREE.Color(0x53129a), new THREE.Color(0xd44dff)],
-  rejected: [25, 1.28, new THREE.Color(0x8f174f), new THREE.Color(0xff4fb7)],
-  reckoning: [34, 1.58, new THREE.Color(0x76112b), new THREE.Color(0xff326e)],
-  crossing: [30, 1.42, new THREE.Color(0x176aaa), new THREE.Color(0x70f6ff)]
+  idle: [23, 1, new THREE.Color(0x53129a), new THREE.Color(0xd44dff)],
+  rejected: [34, 1.28, new THREE.Color(0x8f174f), new THREE.Color(0xff4fb7)],
+  reckoning: [43, 1.58, new THREE.Color(0x76112b), new THREE.Color(0xff326e)],
+  crossing: [38, 1.42, new THREE.Color(0x176aaa), new THREE.Color(0x70f6ff)]
 };
 const PLAYER_ART = {
   misty: 'assets/traveler-0-0.png', cliff: 'assets/traveler-1-0.png',
@@ -88,6 +90,22 @@ function makePortalRuneTexture() {
   return texture;
 }
 
+function makeLanternGlowTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  const gradient = ctx.createRadialGradient(64, 64, 2, 64, 64, 62);
+  gradient.addColorStop(0, 'rgba(255,238,174,1)');
+  gradient.addColorStop(.16, 'rgba(255,174,73,.82)');
+  gradient.addColorStop(.48, 'rgba(255,91,26,.22)');
+  gradient.addColorStop(1, 'rgba(255,54,12,0)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, 128, 128);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
 function makeStoneHeightTexture(size = 256) {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = size;
@@ -124,6 +142,21 @@ function makeStoneHeightTexture(size = 256) {
   texture.repeat.set(1.4, 1.4);
   texture.anisotropy = 4;
   return texture;
+}
+
+function makeTileTextureVariant(source, turn) {
+  const texture = source.clone();
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  texture.center.set(.5, .5);
+  texture.rotation = turn * Math.PI / 3;
+  texture.repeat.set(1.08, 1.08);
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function tileVariantFor(q, r) {
+  // Stable on every client, so multiplayer boards remain visually identical.
+  return Math.abs(q * 17 + r * 31 + q * r * 7) % 6;
 }
 
 const PORTAL_VERTEX = `
@@ -204,6 +237,7 @@ export class TabokTrue3DBoard {
     this.itemRoot = new THREE.Group();
     this.actorRoot = new THREE.Group();
     this.highlightRoot = new THREE.Group();
+    this.templeLights = [];
     this.startedAt = performance.now();
     this.pointerStart = null;
     this.hovered = null;
@@ -217,9 +251,9 @@ export class TabokTrue3DBoard {
     this.renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.75));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.48;
+    this.renderer.toneMappingExposure = 1.34;
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x050305);
@@ -278,8 +312,8 @@ export class TabokTrue3DBoard {
 
   async loadTextures() {
     const sources = {
-      P: 'assets/exp-purple-stone-v1.png', T: 'assets/exp-teal-stone-v1.png',
-      G: 'assets/exp-grey-stone-v1.png', wall: 'assets/ruin-wall-texture.png'
+      P: 'assets/astral-obsidian-v2.jpg', T: 'assets/astral-teal-v2.jpg',
+      G: 'assets/astral-limestone-v2.jpg', wall: 'assets/ruin-wall-texture.png'
     };
     this.textures = {};
     await Promise.all(Object.entries(sources).map(async ([key, url]) => { this.textures[key] = await this.loadTexture(url); }));
@@ -290,19 +324,49 @@ export class TabokTrue3DBoard {
   }
 
   makeLights() {
-    this.scene.add(new THREE.HemisphereLight(0xb8a9d5, 0x2d1710, 2.15));
-    const moon = new THREE.DirectionalLight(0xc3afff, 3.5);
-    moon.position.set(-8, 17, 9);
-    moon.castShadow = true;
-    moon.shadow.mapSize.set(2048, 2048);
-    moon.shadow.camera.left = moon.shadow.camera.bottom = -19;
-    moon.shadow.camera.right = moon.shadow.camera.top = 19;
-    this.scene.add(moon);
-    [[-12, 2, -9], [12, 2, -9], [-13, 2, 8], [13, 2, 8]].forEach(([x, y, z]) => {
-      const light = new THREE.PointLight(0xffa34d, 25, 9, 2);
-      light.position.set(x, y, z);
-      this.scene.add(light);
-    });
+    this.hemisphereLight = new THREE.HemisphereLight(0x877ba8, 0x160b08, .78);
+    this.scene.add(this.hemisphereLight);
+
+    this.ambientLight = new THREE.AmbientLight(0x21101f, .16);
+    this.scene.add(this.ambientLight);
+
+    this.moonLight = new THREE.DirectionalLight(0xd8d0ff, 4.25);
+    this.moonLight.position.set(-9, 18, 10);
+    this.moonLight.castShadow = true;
+    this.moonLight.shadow.mapSize.set(2048, 2048);
+    this.moonLight.shadow.camera.left = this.moonLight.shadow.camera.bottom = -19;
+    this.moonLight.shadow.camera.right = this.moonLight.shadow.camera.top = 19;
+    this.moonLight.shadow.bias = -.00035;
+    this.moonLight.shadow.normalBias = .035;
+    this.scene.add(this.moonLight);
+
+    this.rimLight = new THREE.DirectionalLight(0x6f3696, 2.05);
+    this.rimLight.position.set(11, 8, -13);
+    this.scene.add(this.rimLight);
+
+    const glowTexture = makeLanternGlowTexture();
+    const flameGeometry = new THREE.SphereGeometry(.1, 8, 6);
+    for (let i = 0; i < 6; i++) {
+      const angle = i / 6 * Math.PI * 2;
+      const x = Math.sin(angle) * 14.8, z = Math.cos(angle) * 14.8;
+      const light = new THREE.PointLight(i % 2 ? 0xffb35a : 0xff7d2d, 30, 7.8, 2);
+      light.position.set(x, 1.65, z);
+      light.userData.baseIntensity = 30;
+      light.userData.phase = i * 1.73;
+      const flame = new THREE.Mesh(
+        flameGeometry,
+        new THREE.MeshBasicMaterial({ color: i % 2 ? 0xffd48a : 0xffad54 })
+      );
+      flame.position.copy(light.position);
+      const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: glowTexture, color: 0xff9b42, transparent: true,
+        opacity: .7, depthWrite: false, blending: THREE.AdditiveBlending
+      }));
+      glow.position.copy(light.position);
+      glow.scale.set(1.75, 1.75, 1);
+      this.scene.add(light, flame, glow);
+      this.templeLights.push({ light, flame, glow, phase: i * 1.73 });
+    }
   }
 
   makeGround() {
@@ -329,13 +393,29 @@ export class TabokTrue3DBoard {
     const topMaterials = {};
     const sideMaterials = {};
     for (const type of ['P', 'T', 'G', 'B', 'W']) {
-      topMaterials[type] = new THREE.MeshStandardMaterial({
-        map: this.textures[type] || this.textures.wall, color: COLORS[type],
-        bumpMap: this.stoneHeightTexture, bumpScale: type === 'W' ? .055 : .042,
-        emissive: type === 'B' ? 0x000000 : COLORS[type], emissiveIntensity: type === 'W' ? .08 : .045,
-        roughness: type === 'W' ? .68 : .9, metalness: type === 'W' ? .18 : .04
+      const source = this.textures[type] || this.textures.wall;
+      topMaterials[type] = Array.from({ length: 6 }, (_, variant) => {
+        const map = makeTileTextureVariant(source, variant);
+        const relief = makeTileTextureVariant(source, variant);
+        relief.colorSpace = THREE.NoColorSpace;
+        const tint = new THREE.Color(TILE_TINTS[type]);
+        tint.offsetHSL(0, 0, (variant - 2.5) * .009);
+        return new THREE.MeshStandardMaterial({
+          map,
+          bumpMap: relief,
+          bumpScale: type === 'B' ? .035 : type === 'W' ? .058 : .074,
+          roughnessMap: relief,
+          color: tint,
+          emissive: type === 'P' ? 0x16081e : type === 'T' ? 0x03100e : 0x090705,
+          emissiveIntensity: type === 'P' ? .095 : .025,
+          roughness: type === 'W' ? .7 : type === 'P' ? .83 : .91,
+          metalness: type === 'W' ? .2 : type === 'T' ? .07 : .035
+        });
       });
-      sideMaterials[type] = new THREE.MeshStandardMaterial({ color: type === 'B' ? 0x090807 : 0x201711, roughness: .96 });
+      sideMaterials[type] = new THREE.MeshStandardMaterial({
+        color: TILE_SIDES[type], roughness: type === 'W' ? .78 : .96,
+        metalness: type === 'W' ? .18 : .015
+      });
     }
     const geometries = {
       playable: new THREE.CylinderGeometry(HEX_RADIUS * .94, HEX_RADIUS * .98, .18, 6, 1, false),
@@ -348,7 +428,8 @@ export class TabokTrue3DBoard {
       if (cell.type === 'B' && portalDistance <= 1) continue;
       const playable = 'PTG'.includes(cell.type);
       const geometry = cell.type === 'W' ? geometries.entry : playable ? geometries.playable : geometries.blocked;
-      const mesh = new THREE.Mesh(geometry, [sideMaterials[cell.type], topMaterials[cell.type], sideMaterials[cell.type]]);
+      const variant = tileVariantFor(cell.q, cell.r);
+      const mesh = new THREE.Mesh(geometry, [sideMaterials[cell.type], topMaterials[cell.type][variant], sideMaterials[cell.type]]);
       mesh.position.copy(worldFor(id));
       mesh.position.y = cell.type === 'B' ? .06 : .02;
       // CylinderGeometry starts point-top, matching TABOK's original board and
@@ -373,11 +454,6 @@ export class TabokTrue3DBoard {
       column.rotation.y = angle;
       column.castShadow = column.receiveShadow = true;
       this.scene.add(column);
-      if (i % 4 === 0) {
-        const flame = new THREE.PointLight(0xff7a32, 17, 5, 2);
-        flame.position.set(Math.sin(angle) * 15.8, 1.25, Math.cos(angle) * 15.8);
-        this.scene.add(flame);
-      }
     }
   }
 
@@ -546,6 +622,11 @@ export class TabokTrue3DBoard {
     this.portalLight = new THREE.PointLight(0xb345ff, 16, 7, 2);
     this.portalLight.position.y = 1.35;
     this.portal.add(this.portalLight);
+
+    this.portalSpotlight = new THREE.SpotLight(0xc955ff, 18, 13, Math.PI / 4.5, .72, 1.7);
+    this.portalSpotlight.position.set(0, 8.5, 0);
+    this.portalSpotlight.target.position.set(0, 0, 0);
+    this.scene.add(this.portalSpotlight, this.portalSpotlight.target);
     this.portal.userData.pickPortal = true;
     this.scene.add(this.portal);
     this.pickables.push(well, stones, this.portalCaps, this.portalVortex, ...this.portalLips, ...this.portalKeystones);
@@ -703,6 +784,13 @@ export class TabokTrue3DBoard {
     const ratioCap = quality === 'ultra' ? 1 : quality === 'lite' ? 1.25 : quality === 'full' ? 2 : 1.5;
     this.renderer.setPixelRatio(Math.min(devicePixelRatio || 1, ratioCap));
     this.renderer.shadowMap.enabled = quality !== 'ultra';
+    const enabledLights = quality === 'full' ? 6 : quality === 'auto' ? 4 : 3;
+    this.templeLights.forEach((entry, index) => {
+      // The three-light pattern is evenly spaced, retaining depth on low-power devices.
+      const enabled = enabledLights === 6 || (enabledLights === 4 ? index !== 1 && index !== 4 : index % 2 === 0);
+      entry.light.visible = enabled;
+      entry.glow.material.opacity = enabled ? .7 : .22;
+    });
     if (this.portalCapMaterial) {
       this.portalCapMaterial.displacementScale = quality === 'ultra' ? .035 : quality === 'lite' ? .065 : .105;
       this.portalCapMaterial.bumpScale = quality === 'ultra' ? .035 : .075;
@@ -760,9 +848,17 @@ export class TabokTrue3DBoard {
   render() {
     const time = (performance.now() - this.startedAt) / 1000;
     this.controls.update();
+    this.templeLights.forEach(entry => {
+      const flicker = 1 + Math.sin(time * 7.7 + entry.phase) * .055 + Math.sin(time * 13.1 + entry.phase * 1.7) * .026;
+      entry.light.intensity = entry.light.userData.baseIntensity * flicker;
+      entry.flame.scale.y = 1 + Math.sin(time * 9.3 + entry.phase) * .16;
+      if (entry.light.visible) entry.glow.material.opacity = .66 + Math.sin(time * 5.4 + entry.phase) * .11;
+    });
     const look = PORTAL_LOOKS[this.portalState] || PORTAL_LOOKS.idle;
     const intensity = look[0] * (.94 + Math.sin(time * 2.15) * .06);
     this.portalLight.intensity += (intensity - this.portalLight.intensity) * .06;
+    this.portalSpotlight.color.lerp(look[3], .04);
+    this.portalSpotlight.intensity += (look[0] * .74 - this.portalSpotlight.intensity) * .045;
     this.portalVortexMaterial.uniforms.uTime.value = time;
     this.portalMistMaterial.uniforms.uTime.value = time;
     this.portalVortexMaterial.uniforms.uPower.value += (look[1] - this.portalVortexMaterial.uniforms.uPower.value) * .045;
