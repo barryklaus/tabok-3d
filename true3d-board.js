@@ -251,6 +251,51 @@ const DOME_FRAGMENT = `
   }
 `;
 
+const FAULTLINE_VERTEX = `
+  varying vec2 vUv;
+  void main(){
+    vUv=uv;
+    gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);
+  }
+`;
+
+const FAULTLINE_FRAGMENT = `
+  uniform float uTime;
+  uniform float uMajor;
+  uniform float uQuality;
+  varying vec2 vUv;
+  float hash11(float p){return fract(sin(p*127.1)*43758.5453123);}
+  void main(){
+    vec2 p=(vUv-.5)*2.0;
+    float radius=length(p);
+    float edge=1.0-smoothstep(.78,1.0,radius);
+    float core=exp(-radius*3.25);
+    float breath=.84+.16*sin(uTime*(uMajor>.5?2.15:.72));
+    float base=(mix(.035,.09,uMajor)+core*mix(.105,.245,uMajor))*breath*edge;
+
+    float cycle=mix(8.7,3.65,uMajor);
+    float epoch=floor(uTime/cycle);
+    float phase=fract(uTime/cycle);
+    float strike=smoothstep(.006,.018,phase)*(1.0-smoothstep(.055,.092,phase));
+    float seed=hash11(epoch+19.7);
+    float angle=seed*6.2831853;
+    float theta=atan(p.y,p.x);
+    float delta=atan(sin(theta-angle),cos(theta-angle));
+    float jag=.052*sin(radius*39.0+seed*21.0)+.023*sin(radius*83.0+seed*9.0);
+    float trunk=1.0-smoothstep(.018,.062,abs(delta+jag));
+    float forkMask=smoothstep(.31,.43,radius);
+    float forkA=(1.0-smoothstep(.014,.052,abs(delta+jag-(radius-.31)*.28)))*forkMask;
+    float forkB=(1.0-smoothstep(.014,.052,abs(delta+jag+(radius-.31)*.23)))*forkMask;
+    float bolt=max(trunk,max(forkA,forkB))*(1.0-smoothstep(.9,.99,radius));
+    float lightning=bolt*strike*uQuality*edge;
+    vec3 quiet=mix(vec3(.20,.025,.34),vec3(.43,.055,.68),core);
+    vec3 flash=mix(vec3(.62,.18,1.0),vec3(.95,.55,1.0),bolt);
+    vec3 color=quiet*base+flash*lightning*1.35;
+    float alpha=clamp(base+lightning*.92,0.0,.82);
+    gl_FragColor=vec4(color,alpha);
+  }
+`;
+
 function disposeObject(root) {
   root.traverse(node => {
     if (node.geometry) node.geometry.dispose();
@@ -413,6 +458,24 @@ export class TabokTrue3DBoard {
     ground.position.y = -.08;
     ground.receiveShadow = true;
     this.scene.add(ground);
+
+    this.faultlineMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uMajor: { value: 0 },
+        uQuality: { value: 1 }
+      },
+      vertexShader: FAULTLINE_VERTEX,
+      fragmentShader: FAULTLINE_FRAGMENT,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    });
+    this.faultlinePlane = new THREE.Mesh(new THREE.CircleGeometry(16.55, 96), this.faultlineMaterial);
+    this.faultlinePlane.rotation.x = -Math.PI / 2;
+    this.faultlinePlane.position.y = -.066;
+    this.faultlinePlane.renderOrder = 1;
+    this.scene.add(this.faultlinePlane);
 
     const rim = new THREE.Mesh(
       new THREE.TorusGeometry(16.75, .34, 8, 96),
@@ -898,6 +961,7 @@ export class TabokTrue3DBoard {
     const signature = JSON.stringify(state);
     if (signature === this.stateSignature) return;
     this.stateSignature = signature;
+    this.majorPresent = state.monsters.some(monster => monster.major);
     this.clearGroup(this.actorRoot);
     this.clearGroup(this.itemRoot);
     this.clearGroup(this.highlightRoot);
@@ -953,6 +1017,7 @@ export class TabokTrue3DBoard {
     const ratioCap = quality === 'ultra' ? 1 : quality === 'lite' ? 1.25 : quality === 'full' ? 2 : 1.5;
     this.renderer.setPixelRatio(Math.min(devicePixelRatio || 1, ratioCap));
     this.renderer.shadowMap.enabled = quality !== 'ultra';
+    if (this.faultlineMaterial) this.faultlineMaterial.uniforms.uQuality.value = quality === 'ultra' ? 0 : quality === 'lite' ? .5 : 1;
     const enabledLights = quality === 'full' ? 6 : quality === 'auto' ? 4 : 3;
     this.templeLights.forEach((entry, index) => {
       // The three-light pattern is evenly spaced, retaining depth on low-power devices.
@@ -1018,6 +1083,11 @@ export class TabokTrue3DBoard {
 
   render() {
     const time = (performance.now() - this.startedAt) / 1000;
+    if (this.faultlineMaterial) {
+      this.faultlineMaterial.uniforms.uTime.value = time;
+      const target = this.majorPresent ? 1 : 0;
+      this.faultlineMaterial.uniforms.uMajor.value += (target - this.faultlineMaterial.uniforms.uMajor.value) * .035;
+    }
     this.controls.update();
     this.templeLights.forEach(entry => {
       const flicker = 1 + Math.sin(time * 7.7 + entry.phase) * .055 + Math.sin(time * 13.1 + entry.phase * 1.7) * .026;

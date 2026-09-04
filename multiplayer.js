@@ -2,7 +2,7 @@
 (() => {
   'use strict';
 
-  const VERSION = 'v0.44.2 Balanced Stone · L3';
+  const VERSION = 'v0.45.0 Living Faultlines · F1';
   const TOKEN_KEY = 'tabok-multiplayer-token';
   const NAME_KEY = 'tabok-multiplayer-name';
   const NETWORK = window.TABOK_NETWORK || {};
