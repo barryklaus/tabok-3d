@@ -5,7 +5,9 @@ const SQRT3 = Math.sqrt(3);
 const HEX_RADIUS = .72;
 const PORTAL_R = 2.08;
 const COLORS = { P: 0xa979c4, T: 0x55a8a0, G: 0xb1aa9c, B: 0x211d19, W: 0xe0c68e };
-const TILE_TINTS = { P: 0xe2d9e7, T: 0xc7d7d0, G: 0xd9d0c1, B: 0x4b4239, W: 0xf0dfbd };
+// Keep the grey network at the same perceived value as purple and teal even
+// when it catches the moon and temple lights.
+const TILE_TINTS = { P: 0xe2d9e7, T: 0xc7d7d0, G: 0x817971, B: 0x4b4239, W: 0xf0dfbd };
 const TILE_SIDES = { P: 0x211627, T: 0x142724, G: 0x29251f, B: 0x080706, W: 0x49371f };
 const PORTAL_LOOKS = {
   idle: [23, 1, new THREE.Color(0x53129a), new THREE.Color(0xd44dff)],

@@ -1,9 +1,10 @@
 # TABOK — True 3D Board Alpha
 
-Version: **v0.44.1 True 3D Alpha — Living Tokens**
+Version: **v0.44.2 True 3D Alpha — Balanced Stone**
 
 ## Living board interactions
 
+- Grey network stones now retain a darker charcoal-taupe value under bright moonlight and temple lighting, matching the visual weight of the teal and purple networks.
 - Local host movement resolves directly from the true-3D hex under the pointer, fixing legal movement selections that could be swallowed by the multiplayer click bridge.
 
 - Riftwalk destinations can be selected directly on the interactive 3D board, including from a remote Human player's device.
