@@ -1,8 +1,10 @@
 # TABOK — True 3D Board Alpha
 
-Version: **v0.44.0 True 3D Alpha — Living Tokens**
+Version: **v0.44.1 True 3D Alpha — Living Tokens**
 
 ## Living board interactions
+
+- Local host movement resolves directly from the true-3D hex under the pointer, fixing legal movement selections that could be swallowed by the multiplayer click bridge.
 
 - Riftwalk destinations can be selected directly on the interactive 3D board, including from a remote Human player's device.
 - Travelers and Monsters glide across the floor instead of hopping above it.

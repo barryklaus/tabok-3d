@@ -2,7 +2,7 @@
 (() => {
   'use strict';
 
-  const VERSION = 'v0.44.0 Living Tokens · L1';
+  const VERSION = 'v0.44.1 Living Tokens · L2';
   const TOKEN_KEY = 'tabok-multiplayer-token';
   const NAME_KEY = 'tabok-multiplayer-name';
   const NETWORK = window.TABOK_NETWORK || {};
@@ -625,9 +625,11 @@
   function route3DHex(id) {
     if (!room || room.phase !== 'game') return false;
     if (!localOwnsActive()) { showRoomNotice('Waiting for the assigned Traveler on their device.'); return true; }
-    if (isHost) {
-      document.querySelector('.playable[data-id="'+cssEscape(id)+'"]')?.click();
-    } else {
+    // The host already owns the authoritative game engine. Let the 3D board's
+    // normal callback invoke chooseHex/chooseRuneRift directly instead of
+    // synthesizing a second click on the hidden SVG board.
+    if (isHost) return false;
+    else {
       sendToHost('command', {command:{kind:'board', id}});
     }
     return true;
