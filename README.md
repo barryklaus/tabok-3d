@@ -1,6 +1,12 @@
 # TABOK — True 3D Board Alpha
 
-Version: **v0.43.0 True 3D Alpha — Veil Dome**
+Version: **v0.43.1 True 3D Alpha — Private Rolls**
+
+## Private turn rolls
+
+- The full dice-roll presentation appears only on the device controlling the active Human Traveler.
+- Other Human players receive the synchronized result without seeing that Traveler's popup.
+- CPU rolls resolve globally without interrupting Human screens with a dice popup.
 Build: **2026.09.04.V1**
 
 ### Veil Dome and modeled tokens

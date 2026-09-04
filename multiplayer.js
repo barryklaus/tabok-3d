@@ -2,7 +2,7 @@
 (() => {
   'use strict';
 
-  const VERSION = 'v0.43.0 Veil Dome · V1';
+  const VERSION = 'v0.43.1 Private Rolls · P1';
   const TOKEN_KEY = 'tabok-multiplayer-token';
   const NAME_KEY = 'tabok-multiplayer-name';
   const NETWORK = window.TABOK_NETWORK || {};
@@ -607,7 +607,7 @@
     if (isHost || !ui || !game) return;
     applyingRemote = true;
     els.eye.textContent=ui.eye; els.title.textContent=ui.title; els.instruction.textContent=ui.instruction; els.dice.innerHTML=ui.dice; els.controls.innerHTML=ui.controls; els.event.textContent=ui.event; const portal=els.portal.querySelector('.eclipse-well'); if(portal) portal.dataset.state=ui.portalState||'idle';
-    if(ui.turnRoll){els.turnRoll.className=ui.turnRoll.className;els.turnRoll.setAttribute('style',ui.turnRoll.style);els.turnRollPortrait.setAttribute('style',ui.turnRoll.portraitStyle);els.turnRollKicker.textContent=ui.turnRoll.kicker;els.turnRollName.textContent=ui.turnRoll.name;els.turnRollRole.textContent=ui.turnRoll.role;els.turnRollStatus.textContent=ui.turnRoll.status;els.turnRollDice.innerHTML=ui.turnRoll.dice;els.turnRollControl.innerHTML=ui.turnRoll.control}
+    if(ui.turnRoll){els.turnRoll.className=ui.turnRoll.className;els.turnRoll.setAttribute('style',ui.turnRoll.style);els.turnRollPortrait.setAttribute('style',ui.turnRoll.portraitStyle);els.turnRollKicker.textContent=ui.turnRoll.kicker;els.turnRollName.textContent=ui.turnRoll.name;els.turnRollRole.textContent=ui.turnRoll.role;els.turnRollStatus.textContent=ui.turnRoll.status;els.turnRollDice.innerHTML=ui.turnRoll.dice;els.turnRollControl.innerHTML=ui.turnRoll.control;els.turnRoll.classList.toggle('hidden',!localCanViewTurnRoll());if(!localCanViewTurnRoll())dice3D?.hide()}
     els.message.className=ui.message.className; els.messageEye.textContent=ui.message.eye; els.messageTitle.textContent=ui.message.title; els.messageBody.innerHTML=ui.message.body; els.messageContinue.textContent=ui.message.continueText; els.messageContinue.hidden=ui.message.continueHidden;
     const input=document.getElementById('lastBreathInput'); if(input) input.value=ui.message.input;
     applyingRemote=false; lockRemoteControls();
@@ -621,6 +621,7 @@
 
   function localOwnsSlot(slot) { return seatForSlot(slot)?.owner === token; }
   function localOwnsActive() { return !!(game && active() && localOwnsSlot(active().p)); }
+  function localCanViewTurnRoll(player = active()) { return !!(room?.phase === 'game' && game?.phase === 'roll' && player?.controller === 'human' && localOwnsSlot(player.p)); }
   function challengedSlot() {
     const alert = els.messageBody.querySelector('.challenge-player-alert strong');
     const match = alert?.textContent.match(/\bP[1-6]\b/);
@@ -724,5 +725,6 @@
   renderChat();
   renderLanding();
   setPill('MULTIPLAYER READY','waiting');
-  window.TabokMultiplayer={get room(){return room},get isHost(){return isHost},version:VERSION};
+  window.TabokCanViewTurnRoll=localCanViewTurnRoll;
+  window.TabokMultiplayer={get room(){return room},get isHost(){return isHost},canViewActiveRoll:localCanViewTurnRoll,version:VERSION};
 })();
