@@ -2,7 +2,7 @@
 (() => {
   'use strict';
 
-  const VERSION = 'v0.45.0 Living Faultlines · F1';
+  const VERSION = 'v0.46.0 High Fidelity 60 · H1';
   const TOKEN_KEY = 'tabok-multiplayer-token';
   const NAME_KEY = 'tabok-multiplayer-name';
   const NETWORK = window.TABOK_NETWORK || {};
@@ -133,7 +133,7 @@
 
   function newRoom(id) {
     return {
-      id, phase:'lobby', capacity:6, speed:'fast', quality:'ultra', hostToken:token, rolling:null,
+      id, phase:'lobby', capacity:6, speed:'fast', quality:'full', hostToken:token, rolling:null,
       seats: PLAYER_DATA.map((data, i) => ({slot:data[0], kind:'open', owner:null, ownerLabel:'', connected:false, charId:CHARACTERS[i].id, customName:CHARACTERS[i].name, roll:null})),
       chat:[{system:true, text:'The room is open. Claim a Traveler or let the host summon CPU companions.'}]
     };
@@ -448,7 +448,7 @@
     const order = seats.filter(s => occupied(s) && s.roll !== null).slice().sort((a,b) => b.roll-a.roll);
     const availablePositions = availableInitiativePositions();
     dialog.innerHTML = '<div class="eyebrow">Multiplayer lobby · ' + (isHost ? 'you are host' : 'connected guest') + '</div><h2>Choose your Traveler</h2><div class="room-code"><span>Room code</span><b>' + safe(roomCode(room.id)) + '</b><button id="mpCopyCode">Copy code</button></div>'+relayMarkup() +
-      '<div class="room-settings"><label>Traveler slots<select id="mpCapacity" ' + (!isHost?'disabled':'') + '>' + [1,2,3,4,5,6].map(n => '<option ' + (room.capacity===n?'selected':'') + '>'+n+'</option>').join('') + '</select></label><label>Animation pace<select id="mpSpeed" ' + (!isHost?'disabled':'') + '><option value="fast" ' + (room.speed==='fast'?'selected':'') + '>Fast</option><option value="cinematic" ' + (room.speed==='cinematic'?'selected':'') + '>Cinematic</option><option value="instant" ' + (room.speed==='instant'?'selected':'') + '>Instant</option></select></label><label>Board quality<select id="mpQuality" ' + (!isHost?'disabled':'') + '><option value="ultra" ' + (room.quality==='ultra'?'selected':'') + '>Ultra performance 60+</option><option value="auto" ' + (room.quality==='auto'?'selected':'') + '>Auto</option><option value="full" ' + (room.quality==='full'?'selected':'') + '>High fidelity</option><option value="lite" ' + (room.quality==='lite'?'selected':'') + '>Performance</option></select></label></div>' +
+      '<div class="room-settings"><label>Traveler slots<select id="mpCapacity" ' + (!isHost?'disabled':'') + '>' + [1,2,3,4,5,6].map(n => '<option ' + (room.capacity===n?'selected':'') + '>'+n+'</option>').join('') + '</select></label><label>Animation pace<select id="mpSpeed" ' + (!isHost?'disabled':'') + '><option value="fast" ' + (room.speed==='fast'?'selected':'') + '>Fast</option><option value="cinematic" ' + (room.speed==='cinematic'?'selected':'') + '>Cinematic</option><option value="instant" ' + (room.speed==='instant'?'selected':'') + '>Instant</option></select></label><label>Board quality<select id="mpQuality" ' + (!isHost?'disabled':'') + '><option value="full" ' + (room.quality==='full'?'selected':'') + '>High Fidelity 60</option><option value="auto" ' + (room.quality==='auto'?'selected':'') + '>Cinematic maximum</option><option value="ultra" ' + (room.quality==='ultra'?'selected':'') + '>Performance 60+</option><option value="lite" ' + (room.quality==='lite'?'selected':'') + '>Battery saver</option></select></label></div>' +
       '<div class="mp-seat-list">' + seats.map(renderLobbySeat).join('') + '</div>' + (isHost ? '<div class="mp-cpu-tools"><button class="mp-fill-cpu" id="mpFillCPU">Fill open slots with CPU</button><button class="mp-all-cpu" id="mpAllCPU">Make every slot CPU</button></div>' : '') + '<div class="mp-room-footer"><div class="mp-room-status">' + (roomReady() ? (humanSeats().length ? '' : 'All-CPU spectator match ready. ') + 'Starting order locked: ' + order.map((s,i) => (i+1)+'. '+safe(s.customName)+' (position '+s.roll+')').join(' · ') : 'Pre-game roll-off: each roll permanently claims one unused position. Available: '+(availablePositions.length?availablePositions.join(', '):'none')+'. Highest position acts first; ties are impossible.') + '</div><button class="primary mp-start" id="mpStart" ' + (!isHost || !roomReady()?'disabled':'') + '>Begin the Crossing</button></div><div class="mp-alert" id="mpLobbyAlert"></div>' + engineConfigMarkup();
     document.getElementById('mpCopyCode').onclick = async () => { try { await navigator.clipboard.writeText(roomCode(room.id)); showLobbyAlert('Room code copied.'); } catch (_) { showLobbyAlert('Room code: ' + roomCode(room.id)); } };
     document.getElementById('mpCapacity').onchange = e => lobbyAction('capacity', {value:e.target.value});

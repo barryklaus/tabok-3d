@@ -323,17 +323,31 @@ export class TabokTrue3DBoard {
     this.hovered = null;
     this.stateSignature = '';
     this.portalState = 'idle';
+    this.quality = 'full';
+    this.renderRatio = 1;
+    this.renderRatioMin = .72;
+    this.renderRatioMax = 1.25;
+    this.adaptiveResolution = true;
+    this.frameTimes = [];
+    this.lastFrameAt = performance.now();
+    this.lastQualityCheckAt = this.lastFrameAt;
+    this.qualityRecoveryChecks = 0;
+    this.lastArcUpdateAt = 0;
+    this.suspended = document.hidden;
     this.ready = this.init();
   }
 
   async init() {
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.75));
+    // Keep the DOM interface Retina-sharp while the expensive 3D framebuffer
+    // begins at a sensible density. High Fidelity adjusts this value gently to
+    // hold 60 fps instead of blindly rendering a 5K backing canvas.
+    this.renderer.setPixelRatio(this.renderRatio);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.34;
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x050305);
@@ -372,9 +386,22 @@ export class TabokTrue3DBoard {
     this.makePortal();
     this.scene.add(this.itemRoot, this.actorRoot, this.highlightRoot);
     this.bindInput();
+    this.setQuality('full');
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(this.canvas.parentElement);
     this.resize();
+    try {
+      if (this.renderer.compileAsync) await this.renderer.compileAsync(this.scene, this.camera);
+      else this.renderer.compile(this.scene, this.camera);
+    } catch (_) {
+      // Compilation is an optional warm-up; rendering remains the fallback.
+    }
+    this.visibilityHandler = () => {
+      this.suspended = document.hidden;
+      this.lastFrameAt = performance.now();
+      this.frameTimes.length = 0;
+    };
+    document.addEventListener('visibilitychange', this.visibilityHandler);
     this.renderer.setAnimationLoop(() => this.render());
     document.documentElement.classList.add('true3d-active');
     document.documentElement.dataset.gpuBackend = 'three-webgl';
@@ -520,25 +547,43 @@ export class TabokTrue3DBoard {
       blocked: new THREE.CylinderGeometry(HEX_RADIUS * .94, HEX_RADIUS * .98, .28, 6, 1, false),
       entry: new THREE.CylinderGeometry(HEX_RADIUS, HEX_RADIUS * 1.02, .24, 6, 1, false)
     };
+    // Each tile used to be a separate mesh and shadow caster. Grouping equal
+    // tiles into instanced batches preserves every textured hex while reducing
+    // hundreds of draw submissions to a few dozen.
+    const batches = new Map();
     for (const cell of this.config.cells) {
       const id = idOf(cell.q, cell.r);
       const portalDistance = Math.max(Math.abs(cell.q), Math.abs(cell.r - 11), Math.abs(cell.q + cell.r - 11));
       if (cell.type === 'B' && portalDistance <= 1) continue;
       const playable = 'PTG'.includes(cell.type);
-      const geometry = cell.type === 'W' ? geometries.entry : playable ? geometries.playable : geometries.blocked;
       const variant = tileVariantFor(cell.q, cell.r);
-      const mesh = new THREE.Mesh(geometry, [sideMaterials[cell.type], topMaterials[cell.type][variant], sideMaterials[cell.type]]);
-      mesh.position.copy(worldFor(id));
-      mesh.position.y = cell.type === 'B' ? .06 : .02;
-      // CylinderGeometry starts point-top, matching TABOK's original board and
-      // the axial coordinate spacing used by worldFor().
-      mesh.rotation.y = 0;
+      const shape = cell.type === 'W' ? 'entry' : playable ? 'playable' : 'blocked';
+      const key = `${cell.type}:${variant}:${shape}`;
+      if (!batches.has(key)) batches.set(key, { type: cell.type, variant, shape, playable, cells: [] });
+      batches.get(key).cells.push({ id, y: cell.type === 'B' ? .06 : .02 });
+    }
+    const matrix = new THREE.Matrix4();
+    for (const batch of batches.values()) {
+      const mesh = new THREE.InstancedMesh(
+        geometries[batch.shape],
+        [sideMaterials[batch.type], topMaterials[batch.type][batch.variant], sideMaterials[batch.type]],
+        batch.cells.length
+      );
+      const instanceIds = [];
+      batch.cells.forEach(({ id, y }, instanceId) => {
+        const position = worldFor(id);
+        matrix.makeTranslation(position.x, y, position.z);
+        mesh.setMatrixAt(instanceId, matrix);
+        instanceIds.push(id);
+        this.cells.set(id, { mesh, instanceId });
+      });
+      mesh.instanceMatrix.setUsage(THREE.StaticDrawUsage);
+      mesh.instanceMatrix.needsUpdate = true;
       mesh.receiveShadow = true;
-      mesh.castShadow = cell.type !== 'B';
-      mesh.userData = { id, playable };
+      mesh.castShadow = false;
+      mesh.userData = { instanceIds, playable: batch.playable };
       this.scene.add(mesh);
-      this.cells.set(id, mesh);
-      if (playable || cell.type === 'W') this.pickables.push(mesh);
+      if (batch.playable || batch.type === 'W') this.pickables.push(mesh);
     }
   }
 
@@ -752,7 +797,7 @@ export class TabokTrue3DBoard {
       if (this.pointerStart && Math.hypot(event.clientX - this.pointerStart.x, event.clientY - this.pointerStart.y) > 5) return;
       const hit = this.pick(event);
       const object = hit?.object;
-      const id = object?.userData?.id || (object?.userData?.pickPortal ? 'PORTAL' : null);
+      const id = this.idForHit(hit);
       if (id !== this.hovered) {
         this.hovered = id;
         this.canvas.style.cursor = id ? 'pointer' : 'grab';
@@ -766,7 +811,10 @@ export class TabokTrue3DBoard {
       const hit = this.pick(event);
       if (!hit) return;
       if (hit.object.userData.pickPortal) this.config.onPortal?.();
-      else if (hit.object.userData.id) this.config.onHex?.(hit.object.userData.id);
+      else {
+        const id = this.idForHit(hit);
+        if (id) this.config.onHex?.(id);
+      }
     });
     this.canvas.addEventListener('pointerleave', () => { this.pointerStart = null; this.canvas.style.cursor = 'grab'; });
   }
@@ -777,6 +825,14 @@ export class TabokTrue3DBoard {
     this.pointer.y = -(event.clientY - rect.top) / rect.height * 2 + 1;
     this.raycaster.setFromCamera(this.pointer, this.camera);
     return this.raycaster.intersectObjects(this.pickables, false)[0] || null;
+  }
+
+  idForHit(hit) {
+    const object = hit?.object;
+    if (!object) return null;
+    if (object.userData.pickPortal) return 'PORTAL';
+    if (Number.isInteger(hit.instanceId) && object.userData.instanceIds) return object.userData.instanceIds[hit.instanceId] || null;
+    return object.userData.id || null;
   }
 
   makeSprite(url, width, height, centerY = .04) {
@@ -1014,25 +1070,74 @@ export class TabokTrue3DBoard {
 
   setQuality(quality = 'auto') {
     this.quality = quality;
-    const ratioCap = quality === 'ultra' ? 1 : quality === 'lite' ? 1.25 : quality === 'full' ? 2 : 1.5;
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio || 1, ratioCap));
-    this.renderer.shadowMap.enabled = quality !== 'ultra';
-    if (this.faultlineMaterial) this.faultlineMaterial.uniforms.uQuality.value = quality === 'ultra' ? 0 : quality === 'lite' ? .5 : 1;
-    const enabledLights = quality === 'full' ? 6 : quality === 'auto' ? 4 : 3;
+    const dpr = Math.max(1, devicePixelRatio || 1);
+    // full = visually rich adaptive 60 fps; auto = uncapped cinematic mode;
+    // ultra/lite are increasingly conservative fixed performance profiles.
+    this.adaptiveResolution = quality === 'full';
+    this.renderRatioMin = quality === 'full' ? .72 : quality === 'lite' ? .68 : 1;
+    this.renderRatioMax = Math.min(dpr, quality === 'auto' ? 1.75 : quality === 'full' ? 1.25 : quality === 'ultra' ? 1 : .85);
+    this.renderRatio = this.adaptiveResolution ? Math.min(this.renderRatioMax, 1.1) : this.renderRatioMax;
+    this.renderer.setPixelRatio(this.renderRatio);
+    this.lastFrameAt = performance.now();
+    this.lastQualityCheckAt = this.lastFrameAt;
+    this.frameTimes.length = 0;
+    this.qualityRecoveryChecks = 0;
+    document.documentElement.dataset.renderScale = String(this.renderRatio);
+    this.renderer.shadowMap.enabled = quality !== 'ultra' && quality !== 'lite';
+    const shadowSize = quality === 'auto' ? 2048 : 1024;
+    if (this.moonLight.shadow.mapSize.x !== shadowSize) {
+      this.moonLight.shadow.mapSize.set(shadowSize, shadowSize);
+      this.moonLight.shadow.map?.dispose();
+      this.moonLight.shadow.map = null;
+    }
+    if (this.faultlineMaterial) this.faultlineMaterial.uniforms.uQuality.value = quality === 'ultra' ? .25 : quality === 'lite' ? .42 : 1;
+    const enabledLights = quality === 'auto' ? 6 : quality === 'full' ? 3 : 2;
     this.templeLights.forEach((entry, index) => {
-      // The three-light pattern is evenly spaced, retaining depth on low-power devices.
-      const enabled = enabledLights === 6 || (enabledLights === 4 ? index !== 1 && index !== 4 : index % 2 === 0);
+      // Every lantern and glow stays visible; only the costly lights are reduced.
+      const enabled = enabledLights === 6 || (enabledLights === 3 ? index % 2 === 0 : index % 3 === 0);
       entry.light.visible = enabled;
-      entry.glow.material.opacity = enabled ? .7 : .22;
+      entry.glow.material.opacity = .7;
     });
     this.portalArcs?.forEach((arc, index) => {
-      arc.visible = quality === 'full' || quality === 'auto' || index % 2 === 0;
+      arc.visible = quality === 'auto' || quality === 'full' || index % 2 === 0;
     });
     if (this.portalCapMaterial) {
       this.portalCapMaterial.displacementScale = quality === 'ultra' ? .035 : quality === 'lite' ? .065 : .105;
       this.portalCapMaterial.bumpScale = quality === 'ultra' ? .035 : .075;
     }
     this.resize();
+  }
+
+  tuneResolution(now) {
+    if (!this.adaptiveResolution || this.suspended) return;
+    const delta = now - this.lastFrameAt;
+    this.lastFrameAt = now;
+    if (delta > 4 && delta < 100) this.frameTimes.push(delta);
+    if (this.frameTimes.length > 120) this.frameTimes.shift();
+    if (now - this.lastQualityCheckAt < 1600 || this.frameTimes.length < 45) return;
+    const average = this.frameTimes.reduce((sum, value) => sum + value, 0) / this.frameTimes.length;
+    const fps = 1000 / average;
+    let next = this.renderRatio;
+    if (fps < 55.5) {
+      next = Math.max(this.renderRatioMin, this.renderRatio - (fps < 48 ? .14 : .08));
+      this.qualityRecoveryChecks = 0;
+    } else if (fps > 59.2 && this.renderRatio < this.renderRatioMax) {
+      this.qualityRecoveryChecks += 1;
+      if (this.qualityRecoveryChecks >= 3) {
+        next = Math.min(this.renderRatioMax, this.renderRatio + .05);
+        this.qualityRecoveryChecks = 0;
+      }
+    } else {
+      this.qualityRecoveryChecks = 0;
+    }
+    if (Math.abs(next - this.renderRatio) >= .025) {
+      this.renderRatio = Math.round(next * 100) / 100;
+      this.renderer.setPixelRatio(this.renderRatio);
+      this.resize();
+      document.documentElement.dataset.renderScale = String(this.renderRatio);
+    }
+    this.lastQualityCheckAt = now;
+    this.frameTimes.length = 0;
   }
 
   resetCamera() {
@@ -1082,7 +1187,10 @@ export class TabokTrue3DBoard {
   }
 
   render() {
-    const time = (performance.now() - this.startedAt) / 1000;
+    const now = performance.now();
+    if (this.suspended) return;
+    this.tuneResolution(now);
+    const time = (now - this.startedAt) / 1000;
     if (this.faultlineMaterial) {
       this.faultlineMaterial.uniforms.uTime.value = time;
       const target = this.majorPresent ? 1 : 0;
@@ -1093,7 +1201,7 @@ export class TabokTrue3DBoard {
       const flicker = 1 + Math.sin(time * 7.7 + entry.phase) * .055 + Math.sin(time * 13.1 + entry.phase * 1.7) * .026;
       entry.light.intensity = entry.light.userData.baseIntensity * flicker;
       entry.flame.scale.y = 1 + Math.sin(time * 9.3 + entry.phase) * .16;
-      if (entry.light.visible) entry.glow.material.opacity = .66 + Math.sin(time * 5.4 + entry.phase) * .11;
+      entry.glow.material.opacity = .66 + Math.sin(time * 5.4 + entry.phase) * .11;
     });
     const look = PORTAL_LOOKS[this.portalState] || PORTAL_LOOKS.idle;
     const intensity = look[0] * (.94 + Math.sin(time * 2.15) * .06);
@@ -1116,9 +1224,11 @@ export class TabokTrue3DBoard {
     this.portalRuneMaterial.opacity = .76 + Math.sin(time * 2.35) * .16;
     this.portalEnergyMaterial.color.lerp(colorB, .045);
     this.portalEnergyMaterial.opacity = .64 + Math.sin(time * 2.9) * .2;
+    const updateArcGeometry = now - this.lastArcUpdateAt >= 1000 / 30;
     this.portalArcs.forEach((arc, index) => {
       arc.material.color.lerp(colorB, .08);
       arc.material.opacity = .48 + Math.sin(time * 11.7 + index * 1.9) * .28;
+      if (!updateArcGeometry || !arc.visible) return;
       const positions = arc.geometry.attributes.position.array;
       const phase = arc.userData.phase + time * (.08 + index * .004);
       for (let point = 0; point < 8; point++) {
@@ -1132,6 +1242,7 @@ export class TabokTrue3DBoard {
       }
       arc.geometry.attributes.position.needsUpdate = true;
     });
+    if (updateArcGeometry) this.lastArcUpdateAt = now;
     this.portalStoneMaterial.emissive.lerp(colorA, .035);
     this.portalStoneMaterial.emissiveIntensity = .06 + look[1] * .07 + Math.sin(time * 1.7) * .025;
     this.portalCapMaterial.emissive.lerp(colorA, .035);

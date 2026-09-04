@@ -1,6 +1,6 @@
 # TABOK — True 3D Board Alpha
 
-Version: **v0.45.0 True 3D Alpha — Living Faultlines**
+Version: **v0.46.0 True 3D Alpha — High Fidelity 60**
 
 ## Living board interactions
 
@@ -36,7 +36,7 @@ Build: **2026.09.04.V1**
 - Adds six localized warm entrance torches with subtle non-random flame and glow animation.
 - Adds a color-reactive overhead Portal spotlight that changes with rejection, Reckoning, and Crossing states.
 - Uses soft contact shadows and filmic highlight control while preserving tile readability.
-- Ultra Performance activates three evenly spaced torch lights; Auto uses four; High Fidelity uses all six.
+- High Fidelity 60 activates three real torch lights while preserving all six visible flames and glows; Cinematic maximum restores all six real lights.
 
 ### Living Stone material pass
 
@@ -169,14 +169,15 @@ The build remains a browser-native 2.5D interpretation. It does not pretend the
 characters or dice are real-time 3D models; the goal is the mockup's hierarchy,
 depth, illumination, and legibility while retaining the complete multiplayer game.
 
-## Ultra Performance mode
+## Performance modes
 
-- **Ultra Performance 60+** is the default for local and multiplayer rooms.
-- The full-resolution board is rendered once on the GPU and then cached instead of being redrawn continuously.
-- Decorative particles, full-board camera scaling, costly blur filters, and always-running token effects are disabled in Ultra mode.
+- **High Fidelity 60** is the default for local and multiplayer rooms.
+- The HTML interface remains Retina-sharp while only the 3D framebuffer adapts between 72% and 125% density to protect frame pacing.
+- Repeated board tiles render as GPU-instanced batches, and invisible tile shadow casting is removed without changing the tile artwork.
+- Performance 60+ disables costly secondary effects; High Fidelity 60 retains the full atmosphere and adapts before removing visible detail.
 - Important gameplay animation remains: movement, dice, treasure transfers, Portal judgment, Crossing, Last Breath, and Answer-or-Die.
 - The live FPS meter is always visible and can report high-refresh rates up to 240 FPS. Actual FPS follows the browser, device, refresh rate, and power settings.
-- Auto, High Fidelity, and reduced-resolution Performance modes remain available for comparison.
+- Cinematic maximum, Performance 60+, and Battery saver remain available for comparison.
 
 ## Multiplayer alpha
 
@@ -238,7 +239,11 @@ remembered on that device.
 
 ## Performance controls
 
-- **Fast + Ultra Performance** is recommended for online and mobile play.
-- **Cinematic + Full** favors richer effects on stronger desktop hardware.
+- **High Fidelity 60** is now the default. The interface stays Retina-sharp while the 3D board gently adapts its internal resolution between demanding and quiet scenes.
+- Board hexes are GPU-instanced, reducing hundreds of separate tile submissions to a few dozen without changing their textures or geometry.
+- Floor tiles receive shadows but no longer waste time casting nearly invisible shadows; characters, Monsters, equipment, the Portal, and ruins retain dimensional lighting.
+- All six lantern flames and glows remain visible while High Fidelity uses three real scene lights. Cinematic restores all six.
+- Portal lightning retains its full animation but updates its irregular geometry at 30 Hz while camera movement, dice, characters, and the final render remain at 60 Hz.
+- **Cinematic maximum** preserves maximum render density and effects for stronger desktop hardware; **Performance 60+** and **Battery saver** provide fixed lower-cost profiles.
 - Procedural audio uses a small number of native audio nodes and does not add
   network weight to the game.
