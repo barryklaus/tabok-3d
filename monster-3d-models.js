@@ -6,7 +6,7 @@ const M={stone:mat(0x241d21,.94),stone2:mat(0x3b2b28,.9),stone3:mat(0x59402f,.86
 function mesh(g,m,p,pos=[0,0,0],rot=[0,0,0],scale=[1,1,1]){const o=new THREE.Mesh(g,m);o.position.set(...pos);o.rotation.set(...rot);o.scale.set(...scale);o.castShadow=true;o.receiveShadow=true;p.add(o);return o}
 function rounded(w,h,d,m,p,pos,rot=[0,0,0],radius=.06){return mesh(new RoundedBoxGeometry(w,h,d,3,radius),m,p,pos,rot)}
 function capsule(rad,len,m,p,pos,rot=[0,0,0]){return mesh(new THREE.CapsuleGeometry(rad,len,5,9),m,p,pos,rot)}
-function hexBase(root,r,color){const base=mesh(new THREE.CylinderGeometry(r,r*1.08,.24,6),mat(0x151016,.84,.22),root,[0,.02,0]);const ring=mesh(new THREE.TorusGeometry(r*.78,.05,7,6),mat(color,.25,.6,color,.4),root,[0,.16,0],[Math.PI/2,0,Math.PI/6]);return{base,ring}}
+function hexBase(root,r,color){const base=mesh(new THREE.CylinderGeometry(r,r*1.08,.24,6),mat(0x151016,.84,.22),root,[0,.02,0]);const ring=mesh(new THREE.TorusGeometry(r*.78,.05,7,6),mat(color,.25,.6,color,.4),root,[0,.16,0],[Math.PI/2,0,Math.PI/6]);base.userData.galleryPlatform=ring.userData.galleryPlatform=true;return{base,ring}}
 function runeDisc(parent,pos,scale=.22){const g=new THREE.Group();parent.add(g);g.position.set(...pos);mesh(new THREE.TorusGeometry(scale,scale*.11,6,16),M.rune,g);mesh(new THREE.OctahedronGeometry(scale*.55,0),M.runeHot,g,[0,0,0],[0,0,Math.PI/4],[1,1,.25]);return g}
 function claw(parent,pos,rot=[0,0,0],scale=1){return mesh(new THREE.ConeGeometry(.075*scale,.28*scale,7),M.claw,parent,pos,rot)}
 

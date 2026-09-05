@@ -14,6 +14,7 @@ function hairClump(parent,p,material=neutral.hair,s=[1,1,1]){return mesh(new THR
 function platform(root,color){
   const base=mesh(new THREE.CylinderGeometry(1.1,1.24,.2,6),mat(0x171116,.8,.18),root,[0,.02,0]);
   const glow=mesh(new THREE.TorusGeometry(.91,.045,7,6),mat(color,.24,.55,color,.25),root,[0,.15,0],[Math.PI/2,0,Math.PI/6]);
+  base.userData.galleryPlatform=glow.userData.galleryPlatform=true;
   return {base,glow};
 }
 

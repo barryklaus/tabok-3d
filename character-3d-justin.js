@@ -89,7 +89,8 @@ export function createJustinPilot() {
   const root=new THREE.Group(); root.name='Justin_3D_Pilot';
   const model=new THREE.Group(); root.add(model); model.rotation.y=.04;
   const platform=mesh(new THREE.CylinderGeometry(1.15,1.28,.22,6),new THREE.MeshStandardMaterial({color:0x261a13,metalness:.25,roughness:.78}),root,[0,.02,0]);
-  mesh(new THREE.TorusGeometry(.94,.055,7,6),M.gold,root,[0,.16,0],[Math.PI/2,0,Math.PI/6]);
+  const platformRing=mesh(new THREE.TorusGeometry(.94,.055,7,6),M.gold,root,[0,.16,0],[Math.PI/2,0,Math.PI/6]);
+  platform.userData.galleryPlatform=platformRing.userData.galleryPlatform=true;
   const cape=makeCape(model);
   const leftLeg=new THREE.Group(),rightLeg=new THREE.Group(); model.add(leftLeg,rightLeg); leftLeg.position.x=-.32; rightLeg.position.x=.32;
   capsule(.18,.54,M.cloth,leftLeg,[0,.83,0]); capsule(.18,.54,M.cloth,rightLeg,[0,.83,0]);

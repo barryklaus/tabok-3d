@@ -384,11 +384,12 @@
     async function initGPUBoard(){
       const status=document.getElementById('phaseTop');
       try{
-        const{TabokTrue3DBoard}=await import('./true3d-board.js?v=20260905A2'),cells3D=[];
+        const{TabokTrue3DBoard}=await import('./true3d-board.js?v=20260906A1'),cells3D=[];
         Object.entries(COLUMNS).forEach(([qValue,col])=>{const q=Number(qValue);[...col.cells].forEach((type,i)=>cells3D.push({q,r:col.r0+i,type}))});
         webglBoard=new TabokTrue3DBoard(document.getElementById('webglBoard'),{
           cells:cells3D,
           onHex:id=>{if(window.TabokRoute3DHex?.(id))return;if(!game)return;if(game.phase==='move')chooseHex(id,false);else if(game.phase==='rune'&&game.turn?.runePower==='RIFT'&&active()?.controller!=='cpu')chooseRuneRift(id)},
+          onHover:(id,event)=>{const traveler=id&&game?.players.find(p=>p.status==='active'&&p.pos===id);if(!traveler){hideActorTooltip();return}showActorTooltip(event,traveler,{getBoundingClientRect:()=>{const point=webglBoard.actorScreenPoint(traveler.p,.78)||{x:event?.clientX||innerWidth/2,y:event?.clientY||innerHeight/2};return{left:point.x,top:point.y,width:0,height:0}}})},
           onPortal:()=>{if(!game||game.phase!=='move'||active()?.controller==='cpu')return;const plan=humanDestinationPlans(active(),game.turn.remaining);if(game.turn.remaining===1&&gateway.has(active().pos))choosePortal(false);else if(plan.routes.has('PORTAL'))chooseHumanDestination('PORTAL')}
         });
         await webglBoard.ready;

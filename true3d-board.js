@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { createTravelerPilot } from './character-3d-travelers.js?v=20260906A1';
+import { createMonsterPilot } from './monster-3d-models.js?v=20260906A1';
 
 const SQRT3 = Math.sqrt(3);
 const HEX_RADIUS = .72;
@@ -299,7 +301,7 @@ const FAULTLINE_FRAGMENT = `
 function disposeObject(root) {
   root.traverse(node => {
     if (node.geometry) node.geometry.dispose();
-    if (node.material) {
+    if (node.material && !node.userData.preserveMaterial) {
       const materials = Array.isArray(node.material) ? node.material : [node.material];
       materials.forEach(material => material.dispose());
     }
@@ -337,6 +339,7 @@ export class TabokTrue3DBoard {
     this.lastQualityCheckAt = this.lastFrameAt;
     this.qualityRecoveryChecks = 0;
     this.lastArcUpdateAt = 0;
+    this.lastActorModelUpdateAt = 0;
     this.framingKey = '';
     this.suspended = document.hidden;
     this.ready = this.init();
@@ -806,6 +809,7 @@ export class TabokTrue3DBoard {
       if (id !== this.hovered) {
         this.hovered = id;
         this.canvas.style.cursor = id ? 'pointer' : 'grab';
+        this.config.onHover?.(id, event);
         this.highlightRoot.children.forEach(child => {
           const focused = child.userData.id === id;
           child.scale.setScalar(focused ? 1.075 : 1);
@@ -829,6 +833,7 @@ export class TabokTrue3DBoard {
       this.pointerStart = null;
       this.hovered = null;
       this.canvas.style.cursor = 'grab';
+      this.config.onHover?.(null);
       this.highlightRoot.children.forEach(child => {
         child.scale.setScalar(1);
         if (child.material) child.material.opacity = child.userData.baseOpacity;
@@ -1004,20 +1009,38 @@ export class TabokTrue3DBoard {
     trim.rotation.y = Math.PI / 6;
     trim.position.y = .228;
     group.add(trim);
-    let sprite, groundY=.15;
-    if (actor.kind === 'player') sprite = this.makeSprite(PLAYER_ART[actor.charId] || PLAYER_ART.misty, 1.18, 1.65);
-    else if (major) sprite = this.makeSprite('assets/major-monster-fullbody-v1.png', 1.8, 2.65);
-    else {
-      // The source is a four-frame horizontal strip. Crop exactly one frame and
-      // anchor its transparent lower margin to the top of the hexagonal plinth.
-      sprite = this.makeSprite('assets/monster-sprite.png', 1.34, 1.5, .2);
-      sprite.material.map.repeat.set(1 / 4, 1);
-      sprite.material.map.offset.set(0,0);
-      sprite.center.x=.47;
-      groundY=.2;
+    let visual;
+    try {
+      visual = actor.kind === 'player' ? createTravelerPilot(actor.charId || 'misty') : createMonsterPilot(major ? 'major' : 'minor');
+      // Keep silhouettes readable without letting them spill beyond their board hex.
+      const scale = actor.kind === 'player' ? (actor.charId === 'justin' ? .33 : .36) : major ? .36 : .47;
+      visual.scale.setScalar(scale);
+      visual.position.y = .23;
+      visual.traverse(node => {
+        if (node.userData.galleryPlatform) node.visible = false;
+        if (!node.isMesh) return;
+        node.userData.preserveMaterial = true;
+        node.userData.actorModelMesh = true;
+        node.castShadow = this.quality === 'auto';
+        node.receiveShadow = false;
+      });
+      visual.userData.setMode?.(actor.kind === 'monster' ? 'summon' : 'idle');
+      group.userData.summonUntil = actor.kind === 'monster' ? performance.now() + (major ? 1900 : 950) : 0;
+      group.userData.visual3D = visual;
+      group.add(visual);
+    } catch (error) {
+      console.warn('TABOK 3D actor unavailable; using illustrated fallback.', error);
+      if (actor.kind === 'player') visual = this.makeSprite(PLAYER_ART[actor.charId] || PLAYER_ART.misty, 1.18, 1.65);
+      else if (major) visual = this.makeSprite('assets/major-monster-fullbody-v1.png', 1.8, 2.65);
+      else {
+        visual = this.makeSprite('assets/monster-sprite.png', 1.34, 1.5, .2);
+        visual.material.map.repeat.set(1 / 4, 1);
+        visual.material.map.offset.set(0,0);
+        visual.center.x=.47;
+      }
+      visual.position.y = major ? .15 : .2;
+      group.add(visual);
     }
-    sprite.position.y = groundY;
-    group.add(sprite);
     group.position.copy(worldFor(actor.pos));
     group.userData.actorId = actor.id;
     group.userData.actorKey = `${actor.kind}|${actor.charId || ''}|${major ? 1 : 0}`;
@@ -1060,6 +1083,9 @@ export class TabokTrue3DBoard {
     }
     if (!group) group = this.makeActor(actor);
     group.position.copy(worldFor(actor.pos));
+    if (group.userData.visual3D && actor.pos !== 'PORTAL') {
+      group.userData.visual3D.rotation.y = Math.atan2(-group.position.x, -group.position.z);
+    }
     if (group.userData.insetMaterial) group.userData.insetMaterial.emissiveIntensity = actor.active ? .2 : .085;
     if (group.userData.trimMaterial) group.userData.trimMaterial.emissiveIntensity = actor.active ? .28 : .13;
 
@@ -1170,6 +1196,9 @@ export class TabokTrue3DBoard {
     this.qualityRecoveryChecks = 0;
     document.documentElement.dataset.renderScale = String(this.renderRatio);
     this.renderer.shadowMap.enabled = quality !== 'ultra' && quality !== 'lite';
+    this.actorRoot.traverse(node => {
+      if (node.userData.actorModelMesh) node.castShadow = quality === 'auto';
+    });
     const shadowSize = quality === 'auto' ? 2048 : 1024;
     if (this.moonLight.shadow.mapSize.x !== shadowSize) {
       this.moonLight.shadow.mapSize.set(shadowSize, shadowSize);
@@ -1378,6 +1407,19 @@ export class TabokTrue3DBoard {
       glow.scale.setScalar(pulse);
       glow.material.opacity = glow.userData.baseOpacity * (.86 + Math.sin(time * 2.6 + glow.userData.phase) * .14);
     });
+    const actorInterval = this.quality === 'lite' ? 66 : 33;
+    if (now - this.lastActorModelUpdateAt >= actorInterval) {
+      this.actorRoot.children.forEach(actor => {
+        const visual = actor.userData.visual3D;
+        if (!visual?.userData.update) return;
+        if (actor.userData.summonUntil && now >= actor.userData.summonUntil) {
+          actor.userData.summonUntil = 0;
+          visual.userData.setMode?.('idle');
+        }
+        visual.userData.update(time);
+      });
+      this.lastActorModelUpdateAt = now;
+    }
     this.renderer.render(this.scene, this.camera);
   }
 }

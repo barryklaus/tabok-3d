@@ -110,6 +110,17 @@ GitHub Pages also serves the actual 3D version correctly. When 3D is active, the
   every camera angle.
 - Travelers, Monsters, equipment, Rune Dice, the ruin floor, perimeter walls,
   lighting, shadows, fog, and the animated Portal all occupy 3D world space.
+- The live board now uses the complete sculpted cast: all six distinctive
+  Travelers, the Riftback Minor Monster, and the chained Major Monster. Their
+  gallery pedestals are removed in play so every model stands on the board's
+  correctly aligned hex base.
+- Models face toward the central Portal, retain restrained idle motion, slide
+  with their existing gameplay actor, and keep their names available by
+  hovering the occupied hex. Monster appearances begin with a short summon
+  pose before settling into idle.
+- Character animation is sampled at 30 fps (15 fps in Battery saver) while the
+  board and camera continue rendering independently at up to 60 fps. Expensive
+  model shadows are reserved for Cinematic mode.
 - Traveler and Monster artwork is presented as grounded camera-facing game
   miniatures, while their bases, tiles, items, and Portal are geometric objects.
 - The existing SVG board is retained as an automatic compatibility fallback if
