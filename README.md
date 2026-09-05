@@ -121,6 +121,25 @@ GitHub Pages also serves the actual 3D version correctly. When 3D is active, the
 - Character animation is sampled at 30 fps (15 fps in Battery saver) while the
   board and camera continue rendering independently at up to 60 fps. Expensive
   model shadows are reserved for Cinematic mode.
+
+## Living Cast animation system
+
+- Every Traveler now has a named procedural skeleton made from hips, torso,
+  upper arms, articulated forearms and hands, legs, and head. Held props are
+  attached to hand joints rather than floating beside the body.
+- The shared animation controller supports idle, character-specific walking,
+  gliding or jumping, dice casting, grabbing, taking, giving, forceful stealing
+  and Grand Plunder, catching treasure, Rune channeling, victory, and the final
+  leap into the Portal.
+- Minor Monsters emerge from the Portal in a fast arcing ejection with a short
+  camera shock. The Major Monster arrival blacks out the ruin lighting, drives
+  the Portal into a storm state, shakes the arena, and lands multiple lightning
+  strikes before the Sovereign materializes.
+- Rune Dice, Armor, and Shield pickups produce a short vertical light column,
+  expanding floor rings, a local light flash, and a matching receive or Rune
+  pose. Effects are temporary low-poly geometry and are disposed after use.
+- Animation poses run on the established reduced-frequency actor update loop,
+  so the board, camera, dice, and Portal may still render at 60 fps.
 - Traveler and Monster artwork is presented as grounded camera-facing game
   miniatures, while their bases, tiles, items, and Portal are geometric objects.
 - The existing SVG board is retained as an automatic compatibility fallback if

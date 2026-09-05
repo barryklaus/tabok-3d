@@ -112,26 +112,29 @@ export function createJustinPilot() {
   const strap=mesh(new RoundedBoxGeometry(.18,1.55,.12,2,.04),M.leather,torso,[0,.18,.4],[0,0,-.62]); strap.castShadow=true;
   const leftArm=new THREE.Group(),rightArm=new THREE.Group(); torso.add(leftArm,rightArm); leftArm.position.set(.72,.23,0); rightArm.position.set(-.72,.23,0);
   capsule(.2,.56,M.leather,leftArm,[.12,-.22,.02],[0,0,-.3]); capsule(.2,.56,M.leather,rightArm,[-.1,-.22,.02],[0,0,.3]);
-  mesh(new THREE.CylinderGeometry(.24,.2,.38,8),M.gold,leftArm,[.23,-.55,.06],[0,0,-.27]);
-  mesh(new THREE.CylinderGeometry(.22,.19,.4,8),M.gold,rightArm,[-.22,-.56,.06],[0,0,.28]);
-  mesh(new THREE.SphereGeometry(.17,12,8),M.skin,leftArm,[.3,-.79,.12]); mesh(new THREE.SphereGeometry(.17,12,8),M.skin,rightArm,[-.31,-.8,.12]);
+  const leftForearm=new THREE.Group(),rightForearm=new THREE.Group();leftArm.add(leftForearm);rightArm.add(rightForearm);leftForearm.position.set(.2,-.48,.04);rightForearm.position.set(-.2,-.48,.04);leftForearm.rotation.z=-.18;rightForearm.rotation.z=.18;
+  mesh(new THREE.CylinderGeometry(.24,.2,.42,8),M.gold,leftForearm,[.04,-.18,.02],[0,0,-.12]);
+  mesh(new THREE.CylinderGeometry(.22,.19,.44,8),M.gold,rightForearm,[-.04,-.19,.02],[0,0,.12]);
+  const leftHand=new THREE.Group(),rightHand=new THREE.Group();leftForearm.add(leftHand);rightForearm.add(rightHand);leftHand.position.set(.09,-.43,.1);rightHand.position.set(-.09,-.44,.1);mesh(new THREE.SphereGeometry(.17,12,8),M.skin,leftHand);mesh(new THREE.SphereGeometry(.17,12,8),M.skin,rightHand);
   const fur=new THREE.Group(); torso.add(fur); fur.position.set(0,.72,-.02);
   for(let i=0;i<11;i++){const a=-1.42+i*.284;mesh(new THREE.IcosahedronGeometry(.19+(i%3)*.018,1),i%2?M.fur:M.furShade,fur,[Math.sin(a)*.72,Math.cos(a)*.2,Math.cos(a)*.2]);}
   capsule(.16,.38,M.skin,model,[0,3.58,.01]);
   const head=makeHead(model),shield=makeShield(model),sword=makeSword(model);
-  const state={mode:'idle'};
-  root.userData.setMode=mode=>{state.mode=mode};
+  const rig={root,model,hips:model,torso,leftArm,rightArm,leftForearm,rightForearm,leftHand,rightHand,leftLeg,rightLeg,head};root.userData.rig=rig;root.userData.movementStyle='walk';
+  const state={mode:'idle',started:null};
+  root.userData.setMode=mode=>{state.mode=mode==='celebrate'?'victory':mode;state.started=null};
   root.userData.update=time=>{
-    const breathe=Math.sin(time*2.15),slow=Math.sin(time*1.08);
-    if(state.mode==='celebrate'){
-      const hop=Math.max(0,Math.sin(time*3.2)); model.position.y=hop*.42;
-      torso.rotation.z=Math.sin(time*3.2)*.055; leftArm.rotation.z=-.75-hop*.28; rightArm.rotation.z=.82+hop*.25;
-      sword.rotation.z=sword.userData.baseZ-.55-hop*.18; shield.position.y=shield.userData.baseY+.22+hop*.2;
-    } else {
-      model.position.y=0; torso.scale.y=1+breathe*.012; torso.position.y=2.52+breathe*.018;
-      torso.rotation.z=slow*.008; leftArm.rotation.z=-.07+slow*.025; rightArm.rotation.z=.06-slow*.02;
-      sword.rotation.z=sword.userData.baseZ+slow*.018; shield.position.y=shield.userData.baseY+breathe*.018;
-    }
+    if(state.started===null)state.started=time;const age=time-state.started,breathe=Math.sin(time*2.15),slow=Math.sin(time*1.08),cycle=Math.sin(age*10),pulse=Math.sin(Math.min(1,age/1.2)*Math.PI);
+    model.position.set(0,0,0);model.scale.setScalar(1);model.rotation.x=0;model.rotation.z=0;torso.scale.set(1,1+breathe*.012,1);torso.position.y=2.52+breathe*.018;torso.rotation.set(0,0,slow*.008);leftArm.rotation.set(0,0,-.07+slow*.025);rightArm.rotation.set(0,0,.06-slow*.02);leftForearm.rotation.set(0,0,-.18);rightForearm.rotation.set(0,0,.18);leftLeg.rotation.set(0,0,0);rightLeg.rotation.set(0,0,0);sword.rotation.z=sword.userData.baseZ+slow*.018;shield.position.y=shield.userData.baseY+breathe*.018;
+    if(state.mode==='move'){model.position.y=Math.abs(cycle)*.045;leftLeg.rotation.x=cycle*.38;rightLeg.rotation.x=-cycle*.38;leftArm.rotation.x=-cycle*.28;rightArm.rotation.x=cycle*.28;}
+    else if(state.mode==='dice'){torso.rotation.x=-.09*pulse;leftArm.rotation.x=-.72*pulse;rightArm.rotation.x=-.72*pulse;leftArm.rotation.z=-.42;rightArm.rotation.z=.42;leftForearm.rotation.x=-.45*pulse;rightForearm.rotation.x=-.45*pulse;}
+    else if(state.mode==='grab'||state.mode==='take'){torso.rotation.y=-.18*pulse;rightArm.rotation.x=-.95*pulse;rightForearm.rotation.x=-.7*pulse;}
+    else if(state.mode==='give'){torso.rotation.y=.28*pulse;rightArm.rotation.x=-1.2*pulse;rightForearm.rotation.x=.48*pulse;sword.rotation.z=sword.userData.baseZ-.18*pulse;}
+    else if(state.mode==='steal'){model.position.z=-.05*pulse;leftArm.rotation.x=-.9*pulse;rightArm.rotation.x=-.9*pulse;leftArm.rotation.z=-.3;rightArm.rotation.z=.3;leftForearm.rotation.x=-.72*pulse;rightForearm.rotation.x=-.72*pulse;}
+    else if(state.mode==='receive'){model.position.z=-.07*pulse;leftArm.rotation.x=-.8*pulse;rightArm.rotation.x=-.8*pulse;leftForearm.rotation.x=-.48*pulse;rightForearm.rotation.x=-.48*pulse;shield.position.y=shield.userData.baseY+.12*pulse;}
+    else if(state.mode==='rune'){model.position.y=.12*pulse;leftArm.rotation.z=-.92*pulse;rightArm.rotation.z=.92*pulse;torso.rotation.y=age;shield.rotation.z=-.08+age*.35;}
+    else if(state.mode==='victory'){const hop=Math.max(0,Math.sin(age*4));model.position.y=hop*.42;torso.rotation.z=Math.sin(age*4)*.055;leftArm.rotation.z=-.75-hop*.28;rightArm.rotation.z=.82+hop*.25;sword.rotation.z=sword.userData.baseZ-.55-hop*.18;shield.position.y=shield.userData.baseY+.22+hop*.2;}
+    else if(state.mode==='portal'){const u=Math.min(1,age/1.2);model.position.y=Math.sin(u*Math.PI)*.7;model.position.z=-u*.35;model.rotation.x=-u*.45;model.scale.setScalar(1-u*.35);leftArm.rotation.z=-.65;rightArm.rotation.z=.65;leftLeg.rotation.x=-.4;rightLeg.rotation.x=.28;}
     head.rotation.y=Math.sin(time*.67)*.035; cape.rotation.x=cape.userData.baseRotation+Math.sin(time*1.15)*.018;
     platform.rotation.y=time*.035;
   };

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { createTravelerPilot } from './character-3d-travelers.js?v=20260906A1';
-import { createMonsterPilot } from './monster-3d-models.js?v=20260906A1';
+import { createTravelerPilot } from './character-3d-travelers.js?v=20260906A2';
+import { createMonsterPilot } from './monster-3d-models.js?v=20260906A2';
 
 const SQRT3 = Math.sqrt(3);
 const HEX_RADIUS = .72;
@@ -321,6 +321,9 @@ export class TabokTrue3DBoard {
     this.actorRoot = new THREE.Group();
     this.occupancyRoot = new THREE.Group();
     this.highlightRoot = new THREE.Group();
+    this.effectRoot = new THREE.Group();
+    this.transientEffects = [];
+    this.summonCinematic = null;
     this.itemSignature = '';
     this.legalSignature = '';
     this.templeLights = [];
@@ -392,7 +395,7 @@ export class TabokTrue3DBoard {
     this.makeBoard();
     this.makeRuinRing();
     this.makePortal();
-    this.scene.add(this.itemRoot, this.actorRoot, this.occupancyRoot, this.highlightRoot);
+    this.scene.add(this.itemRoot, this.actorRoot, this.occupancyRoot, this.highlightRoot, this.effectRoot);
     this.bindInput();
     this.setQuality('full');
     this.resizeObserver = new ResizeObserver(() => this.resize());
@@ -1041,13 +1044,14 @@ export class TabokTrue3DBoard {
       visual.position.y = major ? .15 : .2;
       group.add(visual);
     }
-    group.position.copy(worldFor(actor.pos));
+    if (!group.userData.summoning && !group.userData.departing) group.position.copy(worldFor(actor.pos));
     group.userData.actorId = actor.id;
     group.userData.actorKey = `${actor.kind}|${actor.charId || ''}|${major ? 1 : 0}`;
     group.userData.insetMaterial = inset.material;
     group.userData.trimMaterial = trim.material;
     this.actorRoot.add(group);
     this.actors.set(actor.id, group);
+    if (actor.kind === 'monster') requestAnimationFrame(() => this.summonActor(actor.id, Boolean(major)));
     return group;
   }
 
@@ -1061,6 +1065,7 @@ export class TabokTrue3DBoard {
 
   removeActor(id) {
     const actor = this.actors.get(id);
+    if (actor?.userData.departing) { actor.userData.pendingRemoval = true; return; }
     if (actor) {
       this.actorRoot.remove(actor);
       disposeObject(actor);
@@ -1082,7 +1087,7 @@ export class TabokTrue3DBoard {
       group = null;
     }
     if (!group) group = this.makeActor(actor);
-    group.position.copy(worldFor(actor.pos));
+    if (!group.userData.summoning && !group.userData.departing) group.position.copy(worldFor(actor.pos));
     if (group.userData.visual3D && actor.pos !== 'PORTAL') {
       group.userData.visual3D.rotation.y = Math.atan2(-group.position.x, -group.position.z);
     }
@@ -1289,16 +1294,70 @@ export class TabokTrue3DBoard {
     this.controls.update();
   }
 
+  playActorAction(id, mode = 'idle', duration = 900) {
+    const actor = this.actors.get(id), visual = actor?.userData.visual3D;
+    if (!visual?.userData.setMode) return Promise.resolve();
+    visual.userData.setMode(mode);
+    clearTimeout(actor.userData.actionTimer);
+    return new Promise(resolve => {
+      actor.userData.actionTimer = setTimeout(() => {
+        if (actor.userData.visual3D === visual) visual.userData.setMode('idle');
+        resolve();
+      }, duration);
+    });
+  }
+
+  createSkyBeam(position, color = 0x8eeeff, duration = 1050, power = 1) {
+    const root = new THREE.Group(), material = new THREE.MeshBasicMaterial({color,transparent:true,opacity:.82,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide});
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(.08 * power,.34 * power,9,10,1,true),material);
+    beam.position.y=4.5;root.add(beam);
+    const ringMaterial=material.clone(),rings=[];
+    for(let i=0;i<3;i++){const ring=new THREE.Mesh(new THREE.TorusGeometry((.34+i*.18)*power,.025*power,5,24),ringMaterial);ring.rotation.x=Math.PI/2;ring.position.y=.2+i*.08;root.add(ring);rings.push(ring)}
+    const light=new THREE.PointLight(color,10*power,5*power,2);light.position.y=1.1;root.add(light);root.position.copy(position);root.position.y=.14;this.effectRoot.add(root);
+    this.transientEffects.push({root,material,ringMaterial,rings,light,started:performance.now(),duration,type:'beam'});
+  }
+
+  lightningStrike(position, power = 1) {
+    const root=new THREE.Group(),material=new THREE.LineBasicMaterial({color:0xf2d7ff,transparent:true,opacity:1,depthWrite:false,blending:THREE.AdditiveBlending});
+    for(let branch=0;branch<3;branch++){const points=[];for(let i=0;i<10;i++){const u=i/9,spread=(1-u)*(.28+branch*.08)*power;points.push(new THREE.Vector3(position.x+Math.sin(i*8.7+branch)*spread,9-u*8.7,position.z+Math.cos(i*6.3+branch)*spread))}const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(points),material);root.add(line)}
+    const light=new THREE.PointLight(0xeed8ff,28*power,10*power,2);light.position.copy(position);light.position.y=1.6;root.add(light);this.effectRoot.add(root);this.transientEffects.push({root,material,light,started:performance.now(),duration:420,type:'lightning'});
+  }
+
+  pickupBurst(id, type = 'rune') {
+    const actor=this.actors.get(id);if(!actor)return;
+    const color=type==='armor'?0xffc35c:type==='shield'?0x72d9ff:0xa66cff;
+    this.createSkyBeam(actor.position,color,type==='rune'?1350:1050,type==='rune'?1.18:1);
+    this.playActorAction(id,type==='rune'?'rune':'receive',type==='rune'?1250:900);
+  }
+
+  summonActor(id, major = false) {
+    const actor=this.actors.get(id);if(!actor||actor.userData.summoning)return;
+    actor.userData.summoning=true;const destination=actor.position.clone(),origin=new THREE.Vector3(0,.38,0),started=performance.now(),duration=major?2600:1150;
+    actor.position.copy(origin);actor.scale.setScalar(major ? .04 : .14);actor.userData.visual3D?.userData.setMode?.('summon');
+    this.portalState=major?'reckoning':'judgment';
+    this.summonCinematic={major,started,duration};
+    this.createSkyBeam(major?destination:origin,major?0xe95cff:0xff77cf,major?2400:950,major?1.75:.85);
+    if(major){[300,1050,1780].forEach((delay,index)=>setTimeout(()=>this.lightningStrike(index===2?destination:new THREE.Vector3(destination.x+(index?2.2:-2.4),0,destination.z+(index?-1.4:1.7)),index===2?1.35:.78),delay))}
+    const step=now=>{if(!this.actors.has(id))return;const u=Math.min(1,(now-started)/duration),ease=1-Math.pow(1-u,3);if(major){actor.position.lerpVectors(origin,destination,ease);actor.position.y+=Math.sin(u*Math.PI)*.42;actor.scale.setScalar(.04+ease*.96)}else{actor.position.lerpVectors(origin,destination,ease);actor.position.y+=Math.sin(u*Math.PI)*1.55;actor.rotation.y=u*Math.PI*2;actor.scale.setScalar(.14+ease*.86)}if(u<1)requestAnimationFrame(step);else{actor.position.copy(destination);actor.rotation.y=0;actor.scale.setScalar(1);actor.userData.summoning=false;actor.userData.visual3D?.userData.setMode?.('idle');setTimeout(()=>{if(this.portalState==='judgment'||this.portalState==='reckoning')this.portalState='idle'},major?700:250)}};requestAnimationFrame(step);
+  }
+
+  portalExit(id, duration = 1550) {
+    const actor=this.actors.get(id);if(!actor)return Promise.resolve();
+    const visual=actor.userData.visual3D,start=actor.position.clone(),end=new THREE.Vector3(0,.42,0),celebrateUntil=performance.now()+480,started=celebrateUntil;actor.userData.departing=true;visual?.userData.setMode?.('victory');let launched=false;
+    return new Promise(resolve=>{const step=now=>{if(now<celebrateUntil){requestAnimationFrame(step);return}if(!launched){launched=true;visual?.userData.setMode?.('portal');this.createSkyBeam(end,0xd96cff,duration,1.35)}const u=Math.min(1,(now-started)/duration),ease=u<.5?2*u*u:1-Math.pow(-2*u+2,2)/2;actor.position.lerpVectors(start,end,ease);actor.position.y+=Math.sin(u*Math.PI)*1.15;actor.rotation.y+=.08;actor.scale.setScalar(1-u*.82);if(u<1)requestAnimationFrame(step);else{actor.userData.departing=false;const remove=actor.userData.pendingRemoval;actor.userData.pendingRemoval=false;if(remove)this.removeActor(id);resolve()}};requestAnimationFrame(step)});
+  }
+
   animateActor(id, from, to, duration = 320) {
     const actor = this.actors.get(id);
     if (!actor) return Promise.resolve();
     const start = worldFor(from), end = worldFor(to), started = performance.now();
+    actor.userData.visual3D?.userData.setMode?.('move');
     return new Promise(resolve => {
       const step = now => {
         const t = Math.min(1, (now - started) / duration);
         const eased = t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
         actor.position.lerpVectors(start, end, eased);
-        if (t < 1) requestAnimationFrame(step); else { actor.position.copy(end); resolve(); }
+        if (t < 1) requestAnimationFrame(step); else { actor.position.copy(end);actor.userData.visual3D?.userData.setMode?.('idle');resolve(); }
       };
       requestAnimationFrame(step);
     });
@@ -1334,9 +1393,14 @@ export class TabokTrue3DBoard {
       this.faultlineMaterial.uniforms.uMajor.value += (target - this.faultlineMaterial.uniforms.uMajor.value) * .035;
     }
     this.controls.update();
+    const cinematic=this.summonCinematic,cinematicAge=cinematic?(now-cinematic.started):Infinity,cinematicLive=cinematicAge<cinematic?.duration;
+    const majorStorm=cinematicLive&&cinematic.major,panic=majorStorm?Math.sin(Math.min(1,cinematicAge/700)*Math.PI):0,flash=majorStorm&&Math.sin(cinematicAge*.075)>.88?1:0;
+    this.hemisphereLight.intensity=majorStorm ? .12 : .78;this.ambientLight.intensity=majorStorm ? .025 : .16;this.moonLight.intensity=majorStorm?(flash?7.5:.38):4.25;this.rimLight.intensity=majorStorm?(flash?6.5:.35):2.05;
+    this.canvas.style.transform=cinematicLive?'translate('+(Math.sin(now*.091)*(majorStorm?3.8:1.8)).toFixed(2)+'px,'+(Math.cos(now*.117)*(majorStorm?3.1:1.4)).toFixed(2)+'px)':'';
+    if(cinematic&&!cinematicLive){this.summonCinematic=null;this.canvas.style.transform=''}
     this.templeLights.forEach(entry => {
       const flicker = 1 + Math.sin(time * 7.7 + entry.phase) * .055 + Math.sin(time * 13.1 + entry.phase * 1.7) * .026;
-      entry.light.intensity = entry.light.userData.baseIntensity * flicker;
+      entry.light.intensity = entry.light.userData.baseIntensity * flicker * (majorStorm ? .035 + flash*.55 : 1);
       entry.flame.scale.y = 1 + Math.sin(time * 9.3 + entry.phase) * .16;
       entry.glow.material.opacity = .66 + Math.sin(time * 5.4 + entry.phase) * .11;
     });
@@ -1420,6 +1484,7 @@ export class TabokTrue3DBoard {
       });
       this.lastActorModelUpdateAt = now;
     }
+    this.transientEffects=this.transientEffects.filter(effect=>{const u=(now-effect.started)/effect.duration;if(u>=1){this.effectRoot.remove(effect.root);disposeObject(effect.root);return false}const fade=Math.sin(Math.min(1,u)*Math.PI);effect.root.scale.setScalar(.72+u*.55);effect.material.opacity=effect.type==='lightning'?Math.max(0,1-u*1.3):fade*.82;if(effect.ringMaterial)effect.ringMaterial.opacity=fade*.9;if(effect.rings)effect.rings.forEach((ring,index)=>ring.scale.setScalar(1+u*(2.2+index*.35)));if(effect.light)effect.light.intensity*=(effect.type==='lightning' ? .72 : .94);return true});
     this.renderer.render(this.scene, this.camera);
   }
 }
