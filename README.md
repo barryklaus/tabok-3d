@@ -2,11 +2,11 @@
 
 Version: **v0.46.1 True 3D Alpha — Continuous Portal**
 
-## Justin 3D character pilot
+## Complete 3D Traveler gallery
 
-Open `character-3d-pilot.html` to inspect the first true-3D Traveler study. Justin is built from lightweight browser-native geometry with dimensional gold armor, a fur mantle, sword, sun shield, idle motion, and a Portal-victory animation. Drag to orbit, scroll or pinch to zoom, and use the presentation controls to compare poses.
+Open `character-3d-pilot.html` to inspect all six true-3D Traveler studies. Misty, Cliff, Paige, Justin, Sue, and Wanday each use lightweight browser-native geometry, distinctive equipment, character-colored lighting, idle motion, and a Portal-victory animation. Select a Traveler, drag to orbit, scroll or pinch to zoom, and use the presentation controls to compare poses.
 
-The pilot is deliberately isolated from the live game. It tests silhouette, materials, lighting, animation, and browser performance without replacing the existing illustrated character artwork.
+The gallery is deliberately isolated from the live game. It tests silhouette, materials, lighting, animation, and browser performance without replacing the existing illustrated character artwork.
 
 ## Living board interactions
 
