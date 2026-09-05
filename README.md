@@ -12,6 +12,12 @@ All six models use connected neck, shoulder, hip, and upper-leg geometry so thei
 
 Waist cores now overlap the torso and pelvis instead of relying on loose costume panels. Justin's sword and Misty and Sue's daggers are anchored at their leather grips, with hands above the guards and every sharp edge safely below the hand.
 
+## 3D Monster gallery
+
+Open `monster-3d-pilot.html` to inspect the Riftback Minor Monster and the Ruin Sovereign Major Monster. The Riftback uses a low quadruped silhouette, layered rune shell, horns, claws, glowing eyes, and orbiting rubble. The Ruin Sovereign uses connected obsidian anatomy, ragged ritual robes, bronze crown and bindings, long clawed hands, and five animated rune monoliths inside a double energy halo.
+
+Both creatures include restrained idle motion and a more forceful summoning state. They remain isolated from live board gameplay until their scale and art direction are approved.
+
 ## Living board interactions
 
 - A single GPU-driven energy surface now glows through the narrow hex seams and sends rare branching lightning beneath the board. When the Major Monster is present, the illumination strengthens, pulses faster, and lightning strikes more frequently. Ultra Performance retains a static glow and disables streak animation.
