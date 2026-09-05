@@ -337,6 +337,7 @@ export class TabokTrue3DBoard {
     this.lastQualityCheckAt = this.lastFrameAt;
     this.qualityRecoveryChecks = 0;
     this.lastArcUpdateAt = 0;
+    this.framingKey = '';
     this.suspended = document.hidden;
     this.ready = this.init();
   }
@@ -1226,8 +1227,29 @@ export class TabokTrue3DBoard {
   }
 
   resetCamera() {
-    this.camera.position.set(0, 18.5, 23.5);
+    this.applyResponsiveFraming(true);
+  }
+
+  applyResponsiveFraming(force = false) {
+    if (!this.camera || !this.controls) return;
+    const rect = this.canvas.parentElement.getBoundingClientRect();
+    const mobile = matchMedia('(max-width: 900px)').matches;
+    const portrait = rect.height > rect.width * 1.08;
+    const key = mobile ? (portrait ? 'mobile-portrait' : 'mobile-landscape') : 'desktop';
+    if (!force && key === this.framingKey) return;
+    this.framingKey = key;
     this.controls.target.set(0, .15, 0);
+    if (key === 'mobile-portrait') {
+      this.camera.fov = 48;
+      this.camera.position.set(0, 27.5, 26);
+    } else if (key === 'mobile-landscape') {
+      this.camera.fov = 44;
+      this.camera.position.set(0, 20.5, 25.5);
+    } else {
+      this.camera.fov = 42;
+      this.camera.position.set(0, 18.5, 23.5);
+    }
+    this.camera.updateProjectionMatrix();
     this.controls.update();
   }
 
@@ -1269,6 +1291,7 @@ export class TabokTrue3DBoard {
     this.renderer.setSize(width, height, false);
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
+    this.applyResponsiveFraming();
   }
 
   render() {

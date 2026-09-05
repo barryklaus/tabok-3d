@@ -260,3 +260,11 @@ remembered on that device.
 - Legal movement now appears as thin light leaking from the hex perimeter, with a precise hover response instead of oversized opaque rings.
 - Occupied-hex light is softer and physically grounded; Major Monsters remain more intense without washing out nearby tile texture.
 - Portal judgment and other major moments retain the strongest visual hierarchy while normal play remains spatially connected to the tabletop.
+
+## Mobile Portal View
+
+- On phones, the 3D tabletop now occupies the entire usable portrait or landscape viewport instead of sitting between stacked page sections.
+- The responsive 3D camera uses the Portal as its fixed visual center and selects a wider portrait or landscape framing only when orientation changes.
+- Turn controls appear as a compact translucent bottom sheet in portrait and a right-side command panel in landscape, leaving the board visible behind them.
+- Room chat starts minimized on a phone and expands over the board when needed; rules, roster ledgers, and desktop-only camera hints no longer consume the mobile playfield.
+- Safe-area spacing protects controls around iPhone notches, the Home indicator, and Safari browser chrome.

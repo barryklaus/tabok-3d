@@ -43,8 +43,11 @@
       button.setAttribute('aria-label',collapsed ? 'Open room chat' : 'Minimize room chat');
       try { localStorage.setItem('tabok-chat-collapsed',collapsed ? '1' : '0'); } catch (_) {}
     });
-    let collapsed = false;
-    try { collapsed = localStorage.getItem('tabok-chat-collapsed') === '1'; } catch (_) {}
+    let collapsed = matchMedia('(max-width: 900px)').matches;
+    try {
+      const saved = localStorage.getItem('tabok-chat-collapsed');
+      if (saved !== null) collapsed = saved === '1';
+    } catch (_) {}
     chat.classList.toggle('collapsed',collapsed);
     button.textContent = collapsed ? '+' : '−';
     head.appendChild(button);

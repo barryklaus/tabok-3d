@@ -103,3 +103,37 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;ba
 @media(max-width:1250px) and (min-width:1101px){.layout{grid-template-columns:230px minmax(520px,1fr) 276px}.side{width:276px;min-width:276px;max-width:276px}.guide.mp-guide{grid-template-rows:205px minmax(90px,1fr) 142px!important}.guide.mp-guide:has(.global-chat.collapsed){grid-template-rows:205px minmax(90px,1fr) 40px!important}.guide.mp-guide>.character-preview{height:205px!important;min-height:205px!important}}
 @media(max-width:1100px){.layout{grid-template-columns:1fr}.side{width:100%;min-width:0;max-width:none}.guide.mp-guide{grid-template-rows:210px minmax(190px,40vh) 160px!important}.guide.mp-guide:has(.global-chat.collapsed){grid-template-rows:210px minmax(190px,40vh) 40px!important}.traveler{width:calc(33.333% - 4px)}}
 @media(max-width:700px){.top{height:62px}.brand strong{font-size:26px}.top-status{min-width:0;width:46%;left:47%}.layout{display:block}.side{padding:0 9px 12px}.traveler{width:calc(50% - 3px)}.true3d-active .true3d-hud{opacity:.9}}
+
+/* v0.47.1 — true full-screen mobile tabletop, centered on the Portal. */
+@media(max-width:900px){
+  html,body{width:100%;height:100%;overflow:hidden;overscroll-behavior:none;background:#030203}
+  body:before{display:none}
+  .shell{width:100%;height:100dvh;min-height:0;overflow:hidden;grid-template-rows:54px minmax(0,1fr)}
+  .top{height:54px;min-height:54px;padding:0 max(8px,env(safe-area-inset-right)) 0 max(9px,env(safe-area-inset-left));gap:7px;flex-wrap:nowrap}
+  .brand{flex:0 0 auto;margin-right:auto}.brand strong{font-size:23px}.brand span,.brand .build-label{display:none}.perf-meter,.network-pill{display:none!important}.sound-toggle{min-height:27px!important;padding:3px 6px!important;font-size:7px!important}.new-game{min-height:28px!important;padding:4px 8px!important;font-size:8px!important}
+  .top-status{display:none!important}
+  .layout{position:relative;display:block;width:100%;height:100%;min-height:0;background:#030203}
+  .stage{position:absolute;inset:0;z-index:1;width:100%;height:100%;min-height:0!important;padding:0!important;overflow:hidden;background:#030203}
+  .board-frame,.true3d-active .board-frame{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;max-width:none!important;aspect-ratio:auto!important;background:#030203!important}
+  .true3d-active .board-frame>#webglBoard{width:100%!important;height:100%!important}
+  .true3d-active .true3d-hud{display:none!important}
+  .replay-highlight{right:max(8px,env(safe-area-inset-right));top:8px;bottom:auto;min-height:29px;padding:5px 8px;font-size:7px;background:rgba(20,13,18,.8)}
+  .guide.mp-guide{position:absolute;left:max(8px,env(safe-area-inset-left));top:8px;z-index:14;display:block!important;width:min(310px,calc(100% - 16px));height:auto!important;max-height:none!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;pointer-events:none}
+  .guide.mp-guide>.character-preview,.guide.mp-guide>.guide-scroll-body{display:none!important}
+  .guide.mp-guide>.global-chat{position:relative;width:100%;min-height:40px!important;max-height:142px;padding:7px!important;border:1px solid rgba(167,117,59,.5)!important;background:rgba(10,7,6,.88)!important;box-shadow:0 8px 22px rgba(0,0,0,.62)!important;backdrop-filter:blur(7px);pointer-events:auto}
+  .guide.mp-guide>.global-chat:not(.collapsed){grid-template-rows:auto minmax(42px,1fr) auto}.guide.mp-guide>.global-chat .chat-messages{max-height:70px}.guide.mp-guide>.global-chat .chat-head{margin:0}.guide.mp-guide>.global-chat:not(.collapsed) .chat-head{margin-bottom:4px}
+  .side{position:absolute;z-index:12;display:grid!important;left:max(8px,env(safe-area-inset-left));right:max(8px,env(safe-area-inset-right));bottom:max(8px,env(safe-area-inset-bottom));width:auto!important;min-width:0!important;max-width:none!important;max-height:43dvh;padding:9px!important;overflow-y:auto;overscroll-behavior:contain;border:1px solid rgba(171,119,60,.58)!important;background:linear-gradient(180deg,rgba(20,14,10,.93),rgba(7,5,5,.96))!important;box-shadow:0 -12px 34px rgba(0,0,0,.78),inset 0 1px rgba(236,191,113,.08)!important;backdrop-filter:blur(8px);grid-template-rows:auto auto auto auto!important;gap:6px}
+  .side .turn-head{height:auto!important;min-height:0;padding:2px 2px 7px;overflow:visible}.side .turn-head .eyebrow{font-size:7px}.side .turn-head h1{margin:2px 0;font-size:20px;line-height:1.05}.side .instruction{font-size:9px;line-height:1.35}
+  .side>.dice{min-height:52px;height:52px}.side .die{min-height:52px!important;padding:5px!important}.side .die small{font-size:7px}.side .die b{font-size:17px}
+  .side #controls{height:auto!important;min-height:0!important;padding:0;overflow:visible}.side #controls>button{min-height:42px!important}.side .treasure-action-grid{min-height:92px}.side .treasure-choice{min-height:92px!important;height:92px!important}.side .treasure-choice .item-sprite{width:42px!important;height:49px!important}
+  .side>.event{height:auto!important;min-height:37px;max-height:54px;padding:8px;overflow:auto;font-size:9px}
+  .side>.side-scroll{display:none!important}
+  .turn-roll-overlay{z-index:60;padding:max(10px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left))}
+  .overlay .dialog{max-height:calc(100dvh - 20px);overflow:auto}
+}
+@media(max-width:900px) and (orientation:landscape){
+  .shell{grid-template-rows:48px minmax(0,1fr)}.top{height:48px;min-height:48px}.brand strong{font-size:21px}
+  .guide.mp-guide{top:7px;width:min(280px,42vw)}
+  .side{left:auto;top:7px;right:max(7px,env(safe-area-inset-right));bottom:max(7px,env(safe-area-inset-bottom));width:min(330px,38vw)!important;max-height:none;padding:8px!important}
+  .side .turn-head h1{font-size:18px}.side>.dice{height:48px;min-height:48px}.side .die{min-height:48px!important}.side>.event{max-height:45px}.replay-highlight{right:calc(min(330px,38vw) + 16px)}
+}

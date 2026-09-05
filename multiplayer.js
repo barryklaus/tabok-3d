@@ -2,7 +2,7 @@
 (() => {
   'use strict';
 
-  const VERSION = 'v0.47.0 Living Arcane Tabletop · A1';
+  const VERSION = 'v0.47.1 Mobile Portal View · A2';
   const TOKEN_KEY = 'tabok-multiplayer-token';
   const NAME_KEY = 'tabok-multiplayer-name';
   const NETWORK = window.TABOK_NETWORK || {};
