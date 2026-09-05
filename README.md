@@ -2,6 +2,12 @@
 
 Version: **v0.46.1 True 3D Alpha — Continuous Portal**
 
+## Justin 3D character pilot
+
+Open `character-3d-pilot.html` to inspect the first true-3D Traveler study. Justin is built from lightweight browser-native geometry with dimensional gold armor, a fur mantle, sword, sun shield, idle motion, and a Portal-victory animation. Drag to orbit, scroll or pinch to zoom, and use the presentation controls to compare poses.
+
+The pilot is deliberately isolated from the live game. It tests silhouette, materials, lighting, animation, and browser performance without replacing the existing illustrated character artwork.
+
 ## Living board interactions
 
 - A single GPU-driven energy surface now glows through the narrow hex seams and sends rare branching lightning beneath the board. When the Major Monster is present, the illumination strengthens, pulses faster, and lightning strikes more frequently. Ultra Performance retains a static glow and disables streak animation.
