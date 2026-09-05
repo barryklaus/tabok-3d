@@ -805,7 +805,11 @@ export class TabokTrue3DBoard {
       if (id !== this.hovered) {
         this.hovered = id;
         this.canvas.style.cursor = id ? 'pointer' : 'grab';
-        this.highlightRoot.children.forEach(child => child.scale.setScalar(child.userData.id === id ? 1.12 : 1));
+        this.highlightRoot.children.forEach(child => {
+          const focused = child.userData.id === id;
+          child.scale.setScalar(focused ? 1.075 : 1);
+          if (child.material) child.material.opacity = focused ? child.userData.hoverOpacity : child.userData.baseOpacity;
+        });
       }
     });
     this.canvas.addEventListener('pointerup', event => {
@@ -820,7 +824,15 @@ export class TabokTrue3DBoard {
         if (id) this.config.onHex?.(id);
       }
     });
-    this.canvas.addEventListener('pointerleave', () => { this.pointerStart = null; this.canvas.style.cursor = 'grab'; });
+    this.canvas.addEventListener('pointerleave', () => {
+      this.pointerStart = null;
+      this.hovered = null;
+      this.canvas.style.cursor = 'grab';
+      this.highlightRoot.children.forEach(child => {
+        child.scale.setScalar(1);
+        if (child.material) child.material.opacity = child.userData.baseOpacity;
+      });
+    });
   }
 
   pick(event) {
@@ -935,15 +947,15 @@ export class TabokTrue3DBoard {
     const glow = new THREE.Mesh(
       geometry,
       new THREE.MeshBasicMaterial({
-        color, transparent: true, opacity: major ? .48 : .35,
-        side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending
+        color, transparent: true, opacity: major ? .34 : .2,
+        side: THREE.DoubleSide, depthWrite: false, blending: THREE.NormalBlending
       })
     );
     glow.rotation.y = Math.PI / 6;
     glow.position.copy(worldFor(actor.pos));
-    glow.position.y = .135;
+    glow.position.y = .125;
     glow.userData.occupancy = true;
-    glow.userData.baseOpacity = major ? .48 : .35;
+    glow.userData.baseOpacity = major ? .34 : .2;
     glow.userData.phase = actor.id.length * .73 + actor.pos.length * .19;
     glow.userData.actorId = actor.id;
     glow.userData.actorKey = `${actor.kind}|${actor.major ? 1 : 0}|${actor.color || ''}`;
@@ -1063,7 +1075,7 @@ export class TabokTrue3DBoard {
       glow = this.occupancyGlows.get(actor.id);
     }
     glow.position.copy(worldFor(actor.pos));
-    glow.position.y = .135;
+    glow.position.y = .125;
   }
 
   syncItems(state) {
@@ -1093,27 +1105,31 @@ export class TabokTrue3DBoard {
     this.legalSignature = signature;
     this.clearGroup(this.highlightRoot);
     state.legal.forEach((id, index) => {
-      const color = new THREE.Color(index === 0 ? 0xffffff : state.turnColor || '#ffd36b');
-      const geometry = new THREE.RingGeometry(.52, .69, 6);
+      const color = new THREE.Color(index === 0 ? 0xf7e4b5 : state.turnColor || '#d6aa58');
+      const geometry = new THREE.RingGeometry(.575, .635, 6);
       geometry.rotateX(-Math.PI / 2);
       const ring = new THREE.Mesh(
         geometry,
-        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: .88, side: THREE.DoubleSide, depthWrite: false })
+        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: index === 0 ? .52 : .38, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending })
       );
       ring.rotation.y = Math.PI / 6;
       ring.position.copy(worldFor(id));
-      ring.position.y = .25;
+      ring.position.y = .132;
       ring.userData.id = id;
+      ring.userData.baseOpacity = index === 0 ? .52 : .38;
+      ring.userData.hoverOpacity = .92;
       this.highlightRoot.add(ring);
     });
     if (state.portalLegal) {
       const ring = new THREE.Mesh(
         new THREE.RingGeometry(2.28, 2.42, 64),
-        new THREE.MeshBasicMaterial({ color: 0xffe3a0, transparent: true, opacity: .8, side: THREE.DoubleSide, depthWrite: false })
+        new THREE.MeshBasicMaterial({ color: 0xffd58a, transparent: true, opacity: .48, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending })
       );
       ring.rotation.x = -Math.PI / 2;
-      ring.position.y = .23;
+      ring.position.y = .142;
       ring.userData.id = 'PORTAL';
+      ring.userData.baseOpacity = .48;
+      ring.userData.hoverOpacity = .88;
       this.highlightRoot.add(ring);
     }
   }

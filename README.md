@@ -250,3 +250,13 @@ remembered on that device.
 - **Cinematic maximum** preserves maximum render density and effects for stronger desktop hardware; **Performance 60+** and **Battery saver** provide fixed lower-cost profiles.
 - Procedural audio uses a small number of native audio nodes and does not add
   network weight to the game.
+
+## Living Arcane Tabletop interface
+
+- The 3D board now receives more screen space through narrower, quieter side rails and a reduced header.
+- Routine controls use carved-stone and bronze surfaces instead of bright flat UI fills, keeping attention on the board.
+- The Traveler roster is denser and calmer; the active Traveler receives one clear framed state while inactive and defeated Travelers recede.
+- Treasure accounting and recent events are collapsible ledgers. Global chat can also be minimized and remembers its local setting.
+- Legal movement now appears as thin light leaking from the hex perimeter, with a precise hover response instead of oversized opaque rings.
+- Occupied-hex light is softer and physically grounded; Major Monsters remain more intense without washing out nearby tile texture.
+- Portal judgment and other major moments retain the strongest visual hierarchy while normal play remains spatially connected to the tabletop.

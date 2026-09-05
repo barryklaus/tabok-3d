@@ -28,10 +28,33 @@
     ['ritualRelic','ritualOddity','ritualKeepsake'].forEach((id,i) => { const node=document.getElementById(id),next=counts[i] || '0'; if(node&&node.textContent!==next) node.textContent=next; });
   }
 
+  function enhanceChat() {
+    const chat = document.getElementById('globalChat');
+    const head = chat?.querySelector('.chat-head');
+    if (!chat || !head || head.querySelector('.chat-collapse')) return;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'chat-collapse';
+    button.setAttribute('aria-label','Minimize room chat');
+    button.textContent = '−';
+    button.addEventListener('click',() => {
+      const collapsed = chat.classList.toggle('collapsed');
+      button.textContent = collapsed ? '+' : '−';
+      button.setAttribute('aria-label',collapsed ? 'Open room chat' : 'Minimize room chat');
+      try { localStorage.setItem('tabok-chat-collapsed',collapsed ? '1' : '0'); } catch (_) {}
+    });
+    let collapsed = false;
+    try { collapsed = localStorage.getItem('tabok-chat-collapsed') === '1'; } catch (_) {}
+    chat.classList.toggle('collapsed',collapsed);
+    button.textContent = collapsed ? '+' : '−';
+    head.appendChild(button);
+  }
+
   function init() {
     buildCodex();
     syncHud();
-    const observer = new MutationObserver(() => { buildCodex(); syncHud(); });
+    enhanceChat();
+    const observer = new MutationObserver(() => { buildCodex(); syncHud(); enhanceChat(); });
     const shell = document.querySelector('.shell');
     if (shell) observer.observe(shell,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['class']});
   }
