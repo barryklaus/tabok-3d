@@ -268,3 +268,11 @@ remembered on that device.
 - Turn controls appear as a compact translucent bottom sheet in portrait and a right-side command panel in landscape, leaving the board visible behind them.
 - Room chat starts minimized on a phone and expands over the board when needed; rules, roster ledgers, and desktop-only camera hints no longer consume the mobile playfield.
 - Safe-area spacing protects controls around iPhone notches, the Home indicator, and Safari browser chrome.
+
+## Mobile Portal Judgment
+
+- Portal decisions now replace the normal mobile game chrome with a dedicated full-screen judgment surface.
+- Requirements are full-width, swipeable cards with an accessible `1 of 3` position indicator instead of three clipped desktop columns.
+- Each card keeps its complete three-number combination and its own clearly labeled `Replace this card` Resolve action.
+- The Traveler's carried pattern remains visible above the requirements for immediate comparison.
+- Decorative borders, tiny letter spacing, and repeated framing are reduced; rejection is a restrained secondary action beneath the decision.
