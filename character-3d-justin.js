@@ -97,6 +97,8 @@ export function createJustinPilot() {
   mesh(new RoundedBoxGeometry(.43,.34,.63,3,.11),M.leather,rightLeg,[0,.36,.12],[0,0,-.02]);
   mesh(new RoundedBoxGeometry(.3,.2,.72,3,.08),M.darkLeather,leftLeg,[0,.15,.23]);
   mesh(new RoundedBoxGeometry(.3,.2,.72,3,.08),M.darkLeather,rightLeg,[0,.15,.23]);
+  capsule(.2,.34,M.cloth,leftLeg,[0,1.27,0]); capsule(.2,.34,M.cloth,rightLeg,[0,1.27,0]);
+  mesh(new RoundedBoxGeometry(1.08,.42,.58,3,.12),M.cloth,model,[0,1.5,0]);
   const torso=new THREE.Group(); model.add(torso); torso.position.y=2.52;
   mesh(new THREE.SphereGeometry(.76,18,12),M.gold,torso,[0,.22,0],[0,0,0],[1,.82,.58]);
   mesh(new THREE.SphereGeometry(.61,16,10),M.cloth,torso,[0,.05,.35],[0,0,0],[1,.75,.22]);
@@ -113,6 +115,7 @@ export function createJustinPilot() {
   mesh(new THREE.SphereGeometry(.17,12,8),M.skin,leftArm,[.3,-.79,.12]); mesh(new THREE.SphereGeometry(.17,12,8),M.skin,rightArm,[-.31,-.8,.12]);
   const fur=new THREE.Group(); torso.add(fur); fur.position.set(0,.72,-.02);
   for(let i=0;i<11;i++){const a=-1.42+i*.284;mesh(new THREE.IcosahedronGeometry(.19+(i%3)*.018,1),i%2?M.fur:M.furShade,fur,[Math.sin(a)*.72,Math.cos(a)*.2,Math.cos(a)*.2]);}
+  capsule(.16,.38,M.skin,model,[0,3.58,.01]);
   const head=makeHead(model),shield=makeShield(model),sword=makeSword(model);
   const state={mode:'idle'};
   root.userData.setMode=mode=>{state.mode=mode};

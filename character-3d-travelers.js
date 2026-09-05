@@ -18,7 +18,7 @@ function platform(root,color){
 }
 
 function face(parent,{tone=skin.light,hair=neutral.hair,hairStyle='short',eye=0x20100c}){
-  const head=new THREE.Group();parent.add(head);head.position.set(0,4.04,.05);
+  const head=new THREE.Group();parent.add(head);head.position.set(0,3.82,.05);
   mesh(new THREE.SphereGeometry(.43,16,12),tone,head,[0,0,0],[0,0,0],[.88,1,.88]);
   mesh(new THREE.SphereGeometry(.11,10,7),tone,head,[0,-.02,.39],[0,0,0],[.72,1,.72]);
   const iris=mat(eye,.45);for(const x of [-.15,.15]){mesh(new THREE.SphereGeometry(.052,9,6),neutral.white,head,[x,.08,.37],[0,0,0],[1.35,.72,.45]);mesh(new THREE.SphereGeometry(.026,8,6),iris,head,[x,.08,.407]);}
@@ -41,19 +41,23 @@ function body(root,{primary,secondary,accent,tone=skin.light,coat=false,skirt=fa
   const leftLeg=new THREE.Group(),rightLeg=new THREE.Group();model.add(leftLeg,rightLeg);leftLeg.position.x=-.25;rightLeg.position.x=.25;
   capsule(.16,.48,secondary,leftLeg,[0,.77,0]);capsule(.16,.48,secondary,rightLeg,[0,.77,0]);
   rounded(.35,.32,.56,neutral.leather,leftLeg,[0,.33,.13],[0,0,.02],.1);rounded(.35,.32,.56,neutral.leather,rightLeg,[0,.33,.13],[0,0,-.02],.1);
-  const torso=new THREE.Group();model.add(torso);torso.position.y=2.42;
+  capsule(.18,.34,secondary,leftLeg,[0,1.18,0]);capsule(.18,.34,secondary,rightLeg,[0,1.18,0]);
+  rounded(.92,.38,.5,secondary,model,[0,1.44,0],[0,0,0],.12);
+  const torso=new THREE.Group();model.add(torso);torso.position.y=2.52;
   mesh(new THREE.SphereGeometry(.64,15,11),primary,torso,[0,.16,0],[0,0,0],[1,.82,.57]);
   rounded(1.2,.14,.5,neutral.leather,torso,[0,-.34,.03],[0,0,0],.045);rounded(.26,.23,.13,accent,torso,[0,-.34,.33],[0,0,0],.04);
   if(skirt){for(const x of [-.42,0,.42])rounded(.38,.75,.1,primary,torso,[x,-.7,.02],[.05,0,x*.17],.04)}
   if(coat){for(const x of [-.43,.43])rounded(.5,1.18,.11,primary,torso,[x,-.48,-.02],[.06,0,x*.16],.06)}
   const leftArm=new THREE.Group(),rightArm=new THREE.Group();torso.add(leftArm,rightArm);leftArm.position.set(.62,.2,0);rightArm.position.set(-.62,.2,0);
+  mesh(new THREE.SphereGeometry(.23,10,7),primary,torso,[-.61,.34,0],[0,0,0],[1.1,.85,1]);mesh(new THREE.SphereGeometry(.23,10,7),primary,torso,[.61,.34,0],[0,0,0],[1.1,.85,1]);
   capsule(.18,.54,secondary,leftArm,[.12,-.25,.02],[0,0,-.28]);capsule(.18,.54,secondary,rightArm,[-.12,-.25,.02],[0,0,.28]);
   mesh(new THREE.SphereGeometry(.15,10,7),tone,leftArm,[.27,-.62,.12]);mesh(new THREE.SphereGeometry(.15,10,7),tone,rightArm,[-.27,-.62,.12]);
+  capsule(.15,.18,tone,model,[0,3.3,.01]);
   return {model,torso,leftArm,rightArm,leftLeg,rightLeg};
 }
 
 function scarf(parts,color){
-  const scarfMat=mat(color,.88);mesh(new THREE.TorusGeometry(.44,.13,7,18),scarfMat,parts.model,[0,3.61,.02],[Math.PI/2,0,0]);
+  const scarfMat=mat(color,.88);mesh(new THREE.TorusGeometry(.44,.13,7,18),scarfMat,parts.model,[0,3.47,.02],[Math.PI/2,0,0]);
   const tail=new THREE.Group();parts.model.add(tail);tail.position.set(-.34,3.46,-.18);
   rounded(.25,1.2,.08,scarfMat,tail,[0,-.45,0],[0,0,.45],.035);rounded(.23,.9,.07,scarfMat,tail,[-.25,-.5,-.02],[0,0,.72],.035);return tail;
 }
@@ -65,7 +69,7 @@ function animate(root,parts,extras={}){
   const state={mode:'idle'};root.userData.setMode=mode=>state.mode=mode;
   root.userData.update=t=>{const b=Math.sin(t*2.05),slow=Math.sin(t*.86);
     if(state.mode==='celebrate'){const hop=Math.max(0,Math.sin(t*3.15));parts.model.position.y=hop*.36;parts.leftArm.rotation.z=-.65-hop*.35;parts.rightArm.rotation.z=.7+hop*.3;parts.torso.rotation.z=Math.sin(t*3.15)*.05;}
-    else{parts.model.position.y=0;parts.torso.position.y=2.42+b*.018;parts.torso.scale.y=1+b*.01;parts.leftArm.rotation.z=-.05+slow*.025;parts.rightArm.rotation.z=.05-slow*.025;parts.torso.rotation.z=slow*.008;}
+    else{parts.model.position.y=0;parts.torso.position.y=2.52+b*.018;parts.torso.scale.y=1+b*.01;parts.leftArm.rotation.z=-.05+slow*.025;parts.rightArm.rotation.z=.05-slow*.025;parts.torso.rotation.z=slow*.008;}
     if(parts.head)parts.head.rotation.y=Math.sin(t*.61)*.04;if(extras.tail)extras.tail.rotation.z=Math.sin(t*1.4)*.045;if(extras.lantern)extras.lantern.rotation.z=Math.sin(t*1.65)*.08;if(extras.staff)extras.staff.rotation.z=(extras.staff.userData.z||0)+Math.sin(t*.8)*.025;if(extras.pony)extras.pony.rotation.z=Math.sin(t*1.35)*.05;if(extras.backpack)extras.backpack.rotation.z=Math.sin(t*.75)*.012;parts.platform.base.rotation.y=t*.03;parts.platform.glow.material.emissiveIntensity=.22+(b+1)*.06;};
   return root;
 }

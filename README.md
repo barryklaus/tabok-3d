@@ -8,6 +8,8 @@ Open `character-3d-pilot.html` to inspect all six true-3D Traveler studies. Mist
 
 The gallery is deliberately isolated from the live game. It tests silhouette, materials, lighting, animation, and browser performance without replacing the existing illustrated character artwork.
 
+All six models use connected neck, shoulder, hip, and upper-leg geometry so their stylized anatomy reads as a continuous figure from every orbit angle.
+
 ## Living board interactions
 
 - A single GPU-driven energy surface now glows through the narrow hex seams and sends rare branching lightning beneath the board. When the Major Monster is present, the illumination strengthens, pulses faster, and lightning strikes more frequently. Ultra Performance retains a static glow and disables streak animation.
