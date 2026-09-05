@@ -121,7 +121,7 @@
 </head>
 <body>
   <div class="shell">
-    <header class="top"><div class="brand"><strong>TABOK</strong><span>The Crossing · True 3D Board</span><small class="build-label">v0.46.0 HIGH FIDELITY 60 · Build 2026.09.04.H1</small></div><small class="perf-meter" id="perfMeter" title="Live animation frame rate">FPS —</small><div class="network-pill" id="networkPill">OFFLINE</div><div class="top-status"><b id="roundTop">New expedition</b><span id="phaseTop" class="webgl-status">Raising the 3D ruins…</span></div><button class="new-game" id="newGame">Room</button></header>
+    <header class="top"><div class="brand"><strong>TABOK</strong><span>The Crossing · True 3D Board</span><small class="build-label">v0.46.1 CONTINUOUS PORTAL · Build 2026.09.05.H2</small></div><small class="perf-meter" id="perfMeter" title="Live animation frame rate">FPS —</small><div class="network-pill" id="networkPill">OFFLINE</div><div class="top-status"><b id="roundTop">New expedition</b><span id="phaseTop" class="webgl-status">Raising the 3D ruins…</span></div><button class="new-game" id="newGame">Room</button></header>
     <main class="layout">
       <aside class="guide" aria-label="How to play TABOK">
         <div class="character-preview" id="characterPreview"><div class="preview-caption"><strong>Choose a Traveler</strong><span>12-frame idle preview</span></div></div>
@@ -384,7 +384,7 @@
     async function initGPUBoard(){
       const status=document.getElementById('phaseTop');
       try{
-        const{TabokTrue3DBoard}=await import('./true3d-board.js?v=20260904H1'),cells3D=[];
+        const{TabokTrue3DBoard}=await import('./true3d-board.js?v=20260905H2'),cells3D=[];
         Object.entries(COLUMNS).forEach(([qValue,col])=>{const q=Number(qValue);[...col.cells].forEach((type,i)=>cells3D.push({q,r:col.r0+i,type}))});
         webglBoard=new TabokTrue3DBoard(document.getElementById('webglBoard'),{
           cells:cells3D,

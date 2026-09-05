@@ -314,9 +314,13 @@ export class TabokTrue3DBoard {
     this.cells = new Map();
     this.pickables = [];
     this.actors = new Map();
+    this.occupancyGlows = new Map();
     this.itemRoot = new THREE.Group();
     this.actorRoot = new THREE.Group();
+    this.occupancyRoot = new THREE.Group();
     this.highlightRoot = new THREE.Group();
+    this.itemSignature = '';
+    this.legalSignature = '';
     this.templeLights = [];
     this.startedAt = performance.now();
     this.pointerStart = null;
@@ -384,7 +388,7 @@ export class TabokTrue3DBoard {
     this.makeBoard();
     this.makeRuinRing();
     this.makePortal();
-    this.scene.add(this.itemRoot, this.actorRoot, this.highlightRoot);
+    this.scene.add(this.itemRoot, this.actorRoot, this.occupancyRoot, this.highlightRoot);
     this.bindInput();
     this.setQuality('full');
     this.resizeObserver = new ResizeObserver(() => this.resize());
@@ -941,7 +945,10 @@ export class TabokTrue3DBoard {
     glow.userData.occupancy = true;
     glow.userData.baseOpacity = major ? .48 : .35;
     glow.userData.phase = actor.id.length * .73 + actor.pos.length * .19;
-    this.highlightRoot.add(glow);
+    glow.userData.actorId = actor.id;
+    glow.userData.actorKey = `${actor.kind}|${actor.major ? 1 : 0}|${actor.color || ''}`;
+    this.occupancyRoot.add(glow);
+    this.occupancyGlows.set(actor.id, glow);
   }
 
   makeActor(actor) {
@@ -1000,8 +1007,12 @@ export class TabokTrue3DBoard {
     group.add(sprite);
     group.position.copy(worldFor(actor.pos));
     group.userData.actorId = actor.id;
+    group.userData.actorKey = `${actor.kind}|${actor.charId || ''}|${major ? 1 : 0}`;
+    group.userData.insetMaterial = inset.material;
+    group.userData.trimMaterial = trim.material;
     this.actorRoot.add(group);
     this.actors.set(actor.id, group);
+    return group;
   }
 
   clearGroup(group) {
@@ -1012,18 +1023,54 @@ export class TabokTrue3DBoard {
     }
   }
 
-  syncState(state) {
-    if (!state) return;
-    const signature = JSON.stringify(state);
-    if (signature === this.stateSignature) return;
-    this.stateSignature = signature;
-    this.majorPresent = state.monsters.some(monster => monster.major);
-    this.clearGroup(this.actorRoot);
+  removeActor(id) {
+    const actor = this.actors.get(id);
+    if (actor) {
+      this.actorRoot.remove(actor);
+      disposeObject(actor);
+      this.actors.delete(id);
+    }
+    const glow = this.occupancyGlows.get(id);
+    if (glow) {
+      this.occupancyRoot.remove(glow);
+      disposeObject(glow);
+      this.occupancyGlows.delete(id);
+    }
+  }
+
+  syncActor(actor) {
+    const actorKey = `${actor.kind}|${actor.charId || ''}|${actor.major ? 1 : 0}`;
+    let group = this.actors.get(actor.id);
+    if (group && group.userData.actorKey !== actorKey) {
+      this.removeActor(actor.id);
+      group = null;
+    }
+    if (!group) group = this.makeActor(actor);
+    group.position.copy(worldFor(actor.pos));
+    if (group.userData.insetMaterial) group.userData.insetMaterial.emissiveIntensity = actor.active ? .2 : .085;
+    if (group.userData.trimMaterial) group.userData.trimMaterial.emissiveIntensity = actor.active ? .28 : .13;
+
+    const glowKey = `${actor.kind}|${actor.major ? 1 : 0}|${actor.color || ''}`;
+    let glow = this.occupancyGlows.get(actor.id);
+    if (glow && glow.userData.actorKey !== glowKey) {
+      this.occupancyRoot.remove(glow);
+      disposeObject(glow);
+      this.occupancyGlows.delete(actor.id);
+      glow = null;
+    }
+    if (!glow) {
+      this.makeOccupancyGlow(actor);
+      glow = this.occupancyGlows.get(actor.id);
+    }
+    glow.position.copy(worldFor(actor.pos));
+    glow.position.y = .135;
+  }
+
+  syncItems(state) {
+    const signature = JSON.stringify([state.equipment, state.runes]);
+    if (signature === this.itemSignature) return;
+    this.itemSignature = signature;
     this.clearGroup(this.itemRoot);
-    this.clearGroup(this.highlightRoot);
-    this.actors.clear();
-    state.players.forEach(player => { const actor = { ...player, kind: 'player' }; this.makeActor(actor); this.makeOccupancyGlow(actor); });
-    state.monsters.forEach(monster => { const actor = { ...monster, kind: 'monster' }; this.makeActor(actor); this.makeOccupancyGlow(actor); });
     state.equipment.forEach(([pos, items]) => items.forEach((item, index) => {
       const equipment = this.makeEquipment(item);
       equipment.position.copy(worldFor(pos));
@@ -1038,6 +1085,13 @@ export class TabokTrue3DBoard {
       die.position.y = .55;
       this.itemRoot.add(die);
     });
+  }
+
+  syncLegalHighlights(state) {
+    const signature = JSON.stringify([state.legal, state.portalLegal, state.turnColor]);
+    if (signature === this.legalSignature) return;
+    this.legalSignature = signature;
+    this.clearGroup(this.highlightRoot);
     state.legal.forEach((id, index) => {
       const color = new THREE.Color(index === 0 ? 0xffffff : state.turnColor || '#ffd36b');
       const geometry = new THREE.RingGeometry(.52, .69, 6);
@@ -1046,8 +1100,6 @@ export class TabokTrue3DBoard {
         geometry,
         new THREE.MeshBasicMaterial({ color, transparent: true, opacity: .88, side: THREE.DoubleSide, depthWrite: false })
       );
-      // Rotate around the board's vertical axis; rotating the original plane's
-      // Z axis produced the visibly mismatched hex angle at oblique views.
       ring.rotation.y = Math.PI / 6;
       ring.position.copy(worldFor(id));
       ring.position.y = .25;
@@ -1064,6 +1116,23 @@ export class TabokTrue3DBoard {
       ring.userData.id = 'PORTAL';
       this.highlightRoot.add(ring);
     }
+  }
+
+  syncState(state) {
+    if (!state) return;
+    const signature = JSON.stringify(state);
+    if (signature === this.stateSignature) return;
+    this.stateSignature = signature;
+    this.majorPresent = state.monsters.some(monster => monster.major);
+    const actors = [
+      ...state.players.map(player => ({ ...player, kind: 'player' })),
+      ...state.monsters.map(monster => ({ ...monster, kind: 'monster' }))
+    ];
+    const nextIds = new Set(actors.map(actor => actor.id));
+    [...this.actors.keys()].forEach(id => { if (!nextIds.has(id)) this.removeActor(id); });
+    actors.forEach(actor => this.syncActor(actor));
+    this.syncItems(state);
+    this.syncLegalHighlights(state);
   }
 
   setPortalState(state) { this.portalState = state || 'idle'; }
@@ -1264,7 +1333,7 @@ export class TabokTrue3DBoard {
         item.position.y = .2 + Math.sin(time * 1.55 + index) * .035;
       }
     });
-    this.highlightRoot.children.forEach(glow => {
+    this.occupancyRoot.children.forEach(glow => {
       if (!glow.userData.occupancy) return;
       const pulse = .88 + Math.sin(time * 2.6 + glow.userData.phase) * .08;
       glow.scale.setScalar(pulse);

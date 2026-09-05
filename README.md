@@ -1,6 +1,6 @@
 # TABOK — True 3D Board Alpha
 
-Version: **v0.46.0 True 3D Alpha — High Fidelity 60**
+Version: **v0.46.1 True 3D Alpha — Continuous Portal**
 
 ## Living board interactions
 
@@ -239,6 +239,9 @@ remembered on that device.
 
 ## Performance controls
 
+- Character movement now updates persistent 3D actors in place. It no longer destroys and recreates every Traveler, Monster, item, glow, material, and geometry after each step, eliminating the hitch that made the Portal appear to restart.
+- Equipment and Rune meshes rebuild only when their actual board inventory changes; legal highlights rebuild only when legal destinations change.
+- The Portal animation clock remains continuous across movement, board synchronization, and multiplayer snapshots. Remote clients now apply the host's 3D Portal state directly as well as its compatibility-layer state.
 - **High Fidelity 60** is now the default. The interface stays Retina-sharp while the 3D board gently adapts its internal resolution between demanding and quiet scenes.
 - Board hexes are GPU-instanced, reducing hundreds of separate tile submissions to a few dozen without changing their textures or geometry.
 - Floor tiles receive shadows but no longer waste time casting nearly invisible shadows; characters, Monsters, equipment, the Portal, and ruins retain dimensional lighting.

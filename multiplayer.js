@@ -2,7 +2,7 @@
 (() => {
   'use strict';
 
-  const VERSION = 'v0.46.0 High Fidelity 60 · H1';
+  const VERSION = 'v0.46.1 Continuous Portal · H2';
   const TOKEN_KEY = 'tabok-multiplayer-token';
   const NAME_KEY = 'tabok-multiplayer-name';
   const NETWORK = window.TABOK_NETWORK || {};
@@ -606,7 +606,7 @@
   function applyUI(ui) {
     if (isHost || !ui || !game) return;
     applyingRemote = true;
-    els.eye.textContent=ui.eye; els.title.textContent=ui.title; els.instruction.textContent=ui.instruction; els.dice.innerHTML=ui.dice; els.controls.innerHTML=ui.controls; els.event.textContent=ui.event; const portal=els.portal.querySelector('.eclipse-well'); if(portal) portal.dataset.state=ui.portalState||'idle';
+    els.eye.textContent=ui.eye; els.title.textContent=ui.title; els.instruction.textContent=ui.instruction; els.dice.innerHTML=ui.dice; els.controls.innerHTML=ui.controls; els.event.textContent=ui.event; const portalState=ui.portalState||'idle',portal=els.portal.querySelector('.eclipse-well'); if(portal) portal.dataset.state=portalState; webglBoard?.setPortalState(portalState);
     if(ui.turnRoll){els.turnRoll.className=ui.turnRoll.className;els.turnRoll.setAttribute('style',ui.turnRoll.style);els.turnRollPortrait.setAttribute('style',ui.turnRoll.portraitStyle);els.turnRollKicker.textContent=ui.turnRoll.kicker;els.turnRollName.textContent=ui.turnRoll.name;els.turnRollRole.textContent=ui.turnRoll.role;els.turnRollStatus.textContent=ui.turnRoll.status;els.turnRollDice.innerHTML=ui.turnRoll.dice;els.turnRollControl.innerHTML=ui.turnRoll.control;els.turnRoll.classList.toggle('hidden',!localCanViewTurnRoll());if(!localCanViewTurnRoll())dice3D?.hide()}
     els.message.className=ui.message.className; els.messageEye.textContent=ui.message.eye; els.messageTitle.textContent=ui.message.title; els.messageBody.innerHTML=ui.message.body; els.messageContinue.textContent=ui.message.continueText; els.messageContinue.hidden=ui.message.continueHidden;
     const input=document.getElementById('lastBreathInput'); if(input) input.value=ui.message.input;
