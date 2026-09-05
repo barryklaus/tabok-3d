@@ -10,6 +10,8 @@ The gallery is deliberately isolated from the live game. It tests silhouette, ma
 
 All six models use connected neck, shoulder, hip, and upper-leg geometry so their stylized anatomy reads as a continuous figure from every orbit angle.
 
+Waist cores now overlap the torso and pelvis instead of relying on loose costume panels. Justin's sword and Misty and Sue's daggers are anchored at their leather grips, with hands above the guards and every sharp edge safely below the hand.
+
 ## Living board interactions
 
 - A single GPU-driven energy surface now glows through the narrow hex seams and sends rare branching lightning beneath the board. When the Major Monster is present, the illumination strengthens, pulses faster, and lightning strikes more frequently. Ultra Performance retains a static glow and disables streak animation.

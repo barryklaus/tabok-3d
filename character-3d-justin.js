@@ -40,13 +40,13 @@ function makeCape(parent) {
 }
 
 function makeSword(parent) {
-  const sword=new THREE.Group(); parent.add(sword); sword.position.set(-.92,2.05,.1); sword.rotation.z=.19;
-  const bladeShape=new THREE.Shape(); bladeShape.moveTo(-.105,-.82); bladeShape.lineTo(-.13,.64); bladeShape.lineTo(0,.94); bladeShape.lineTo(.13,.64); bladeShape.lineTo(.105,-.82); bladeShape.closePath();
-  mesh(new THREE.ExtrudeGeometry(bladeShape,{depth:.055,bevelEnabled:true,bevelSize:.018,bevelThickness:.018,bevelSegments:1}),M.steel,sword,[0,-.42,.02]);
-  mesh(new RoundedBoxGeometry(.62,.1,.13,2,.03),M.goldHot,sword,[0,-1.22,.02]);
-  mesh(new THREE.CylinderGeometry(.075,.08,.52,8),M.darkLeather,sword,[0,-1.51,.02]);
-  mesh(new THREE.SphereGeometry(.13,10,7),M.gold,sword,[0,-1.8,.02]);
-  sword.userData.baseZ=.19; return sword;
+  const sword=new THREE.Group(); parent.add(sword); sword.position.set(-1.03,1.95,.12); sword.rotation.z=.11;
+  mesh(new THREE.CylinderGeometry(.075,.08,.34,8),M.darkLeather,sword,[0,0,.02]);
+  mesh(new RoundedBoxGeometry(.62,.1,.13,2,.03),M.goldHot,sword,[0,-.22,.02]);
+  const bladeShape=new THREE.Shape(); bladeShape.moveTo(-.105,-.27); bladeShape.lineTo(-.12,-1.38); bladeShape.lineTo(0,-1.66); bladeShape.lineTo(.12,-1.38); bladeShape.lineTo(.105,-.27); bladeShape.closePath();
+  mesh(new THREE.ExtrudeGeometry(bladeShape,{depth:.055,bevelEnabled:true,bevelSize:.018,bevelThickness:.018,bevelSegments:1}),M.steel,sword,[0,0,.02]);
+  mesh(new THREE.SphereGeometry(.12,10,7),M.gold,sword,[0,.23,.02]);
+  sword.userData.baseZ=.11; return sword;
 }
 
 function makeShield(parent) {
@@ -99,6 +99,7 @@ export function createJustinPilot() {
   mesh(new RoundedBoxGeometry(.3,.2,.72,3,.08),M.darkLeather,rightLeg,[0,.15,.23]);
   capsule(.2,.34,M.cloth,leftLeg,[0,1.27,0]); capsule(.2,.34,M.cloth,rightLeg,[0,1.27,0]);
   mesh(new RoundedBoxGeometry(1.08,.42,.58,3,.12),M.cloth,model,[0,1.5,0]);
+  mesh(new RoundedBoxGeometry(.92,.72,.5,3,.13),M.cloth,model,[0,1.9,0]);
   const torso=new THREE.Group(); model.add(torso); torso.position.y=2.52;
   mesh(new THREE.SphereGeometry(.76,18,12),M.gold,torso,[0,.22,0],[0,0,0],[1,.82,.58]);
   mesh(new THREE.SphereGeometry(.61,16,10),M.cloth,torso,[0,.05,.35],[0,0,0],[1,.75,.22]);
