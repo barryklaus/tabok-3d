@@ -1,6 +1,38 @@
 # TABOK — True 3D Board Alpha
 
-Version: **v0.49.0 — Sculpted Ruins · 2026.09.06.S1**
+Version: **v0.50.0 — Portal Rituals · 2026.09.06.P1**
+
+## Portal Rituals
+
+- Major summon: the board darkens, three spaced lightning strikes mark the ritual,
+  the portal sphere parts, and the Sovereign rises slowly before floating to its hex.
+  A temporary camera push-in returns to the previous view; dragging cancels the camera motion.
+- Minor summon: the sphere opens and ejects a tumbling beast onto its assigned hex.
+- Portal decisions use a compact, portal-anchored magical panel. All three complete
+  requirement patterns and Resolve choices remain visible without hiding the board.
+- Successful crossing releases the Traveler's name above the portal, then performs
+  a victory gesture, leap and disappearance into the opening. No fullscreen crossing popup.
+- Rejection charges the portal, releases an energy burst and throws the Traveler
+  through the air to their original starting hex. Rule destinations are unchanged.
+- Death separates the articulated head, torso and limb sections, with held equipment.
+  Pieces tumble onto the board, settle, then fade and release their resources. Death
+  waits briefly for a blocking answer popup to close so the breakup can be seen.
+- Explicit host-issued visual events reach connected peers independently of snapshots.
+  IDs prevent duplicate playback. Actors survive intervening snapshots, and receive
+  the latest authoritative position when an animation completes. Late joiners receive
+  the current board, not a replay of old summons.
+- Animation deadlines release turns even if a browser suspends rendering. CPU turns
+  and end-of-game results wait for queued sequences. The room's animation-speed setting
+  controls sequence duration. Reduced-motion preferences shorten
+  sequences and disable the camera push, shake, lightning bursts and large knockback arc.
+
+No videos, new asset downloads, physics library or post-processing chain were added.
+The opening reuses the existing portal shader on two low-resolution shell halves;
+death reuses the existing rig geometry. This is not a guarantee of 60 FPS on every device.
+
+Regression checks: `node --test tests/portal-events.test.cjs` (no dependencies).
+Local browser QA also exercises the real board and game rules: summons, crossing,
+rejection, death, all-Traveler Reckoning, CPU continuation, and compact card readability.
 
 ## Sculpted Ruins cast
 

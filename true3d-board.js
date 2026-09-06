@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createTravelerPilot } from './character-3d-travelers.js?v=20260906S1';
 import { createMonsterPilot } from './monster-3d-models.js?v=20260906S1';
+import { PortalCinematics } from './portal-cinematics.js?v=20260906P1';
 
 const SQRT3 = Math.sqrt(3);
 const HEX_RADIUS = .72;
@@ -1028,8 +1029,7 @@ export class TabokTrue3DBoard {
         node.castShadow = this.quality === 'auto';
         node.receiveShadow = false;
       });
-      visual.userData.setMode?.(actor.kind === 'monster' ? 'summon' : 'idle');
-      group.userData.summonUntil = actor.kind === 'monster' ? performance.now() + (major ? 1900 : 950) : 0;
+      visual.userData.setMode?.('idle');
       group.userData.visual3D = visual;
       group.add(visual);
     } catch (error) {
@@ -1052,7 +1052,7 @@ export class TabokTrue3DBoard {
     group.userData.trimMaterial = trim.material;
     this.actorRoot.add(group);
     this.actors.set(actor.id, group);
-    if (actor.kind === 'monster') requestAnimationFrame(() => this.summonActor(actor.id, Boolean(major)));
+    // Summons are explicit events, never a side effect of receiving a snapshot.
     return group;
   }
 
@@ -1066,8 +1066,9 @@ export class TabokTrue3DBoard {
 
   removeActor(id) {
     const actor = this.actors.get(id);
-    if (actor?.userData.departing) { actor.userData.pendingRemoval = true; return; }
+    if (actor?.userData.departing || actor?.userData.cinematicLocks) { actor.userData.pendingRemoval = true; return; }
     if (actor) {
+      clearTimeout(actor.userData.actionTimer);actor.userData.actionResolve?.();
       this.actorRoot.remove(actor);
       disposeObject(actor);
       this.actors.delete(id);
@@ -1088,8 +1089,9 @@ export class TabokTrue3DBoard {
       group = null;
     }
     if (!group) group = this.makeActor(actor);
-    if (!group.userData.summoning && !group.userData.departing) group.position.copy(worldFor(actor.pos));
-    if (group.userData.visual3D && actor.pos !== 'PORTAL') {
+    if (group.userData.cinematicLocks) group.userData.cinematicSnapshotPos = actor.pos;
+    if (!group.userData.summoning && !group.userData.departing && !group.userData.cinematicLocks) group.position.copy(worldFor(actor.pos));
+    if (group.userData.visual3D && actor.pos !== 'PORTAL' && !group.userData.cinematicLocks) {
       group.userData.visual3D.rotation.y = Math.atan2(-group.position.x, -group.position.z);
     }
     if (group.userData.insetMaterial) group.userData.insetMaterial.emissiveIntensity = actor.active ? .2 : .085;
@@ -1109,6 +1111,7 @@ export class TabokTrue3DBoard {
     }
     glow.position.copy(worldFor(actor.pos));
     glow.position.y = .125;
+    glow.visible = !group.userData.cinematicLocks;
   }
 
   syncItems(state) {
@@ -1185,6 +1188,13 @@ export class TabokTrue3DBoard {
   }
 
   setPortalState(state) { this.portalState = state || 'idle'; }
+
+  playPortalEvent(event) {
+    if (!this.cinematics) this.cinematics = new PortalCinematics(this, worldFor, disposeObject);
+    return this.cinematics.play(event);
+  }
+
+  resetPortalEvents() { this.cinematics?.reset(); }
 
   setQuality(quality = 'auto') {
     this.quality = quality;
@@ -1300,9 +1310,12 @@ export class TabokTrue3DBoard {
     if (!visual?.userData.setMode) return Promise.resolve();
     visual.userData.setMode(mode);
     clearTimeout(actor.userData.actionTimer);
+    actor.userData.actionResolve?.();
     return new Promise(resolve => {
+      actor.userData.actionResolve=resolve;
       actor.userData.actionTimer = setTimeout(() => {
-        if (actor.userData.visual3D === visual) visual.userData.setMode('idle');
+        if (actor.userData.visual3D === visual && !actor.userData.cinematicLocks) visual.userData.setMode('idle');
+        actor.userData.actionResolve=null;
         resolve();
       }, duration);
     });
@@ -1331,22 +1344,6 @@ export class TabokTrue3DBoard {
     this.playActorAction(id,type==='rune'?'rune':'receive',type==='rune'?1250:900);
   }
 
-  summonActor(id, major = false) {
-    const actor=this.actors.get(id);if(!actor||actor.userData.summoning)return;
-    actor.userData.summoning=true;const destination=actor.position.clone(),origin=new THREE.Vector3(0,.38,0),started=performance.now(),duration=major?2600:1150;
-    actor.position.copy(origin);actor.scale.setScalar(major ? .04 : .14);actor.userData.visual3D?.userData.setMode?.('summon');
-    this.portalState=major?'reckoning':'judgment';
-    this.summonCinematic={major,started,duration};
-    this.createSkyBeam(major?destination:origin,major?0xe95cff:0xff77cf,major?2400:950,major?1.75:.85);
-    if(major){[300,1050,1780].forEach((delay,index)=>setTimeout(()=>this.lightningStrike(index===2?destination:new THREE.Vector3(destination.x+(index?2.2:-2.4),0,destination.z+(index?-1.4:1.7)),index===2?1.35:.78),delay))}
-    const step=now=>{if(!this.actors.has(id))return;const u=Math.min(1,(now-started)/duration),ease=1-Math.pow(1-u,3);if(major){actor.position.lerpVectors(origin,destination,ease);actor.position.y+=Math.sin(u*Math.PI)*.42;actor.scale.setScalar(.04+ease*.96)}else{actor.position.lerpVectors(origin,destination,ease);actor.position.y+=Math.sin(u*Math.PI)*1.55;actor.rotation.y=u*Math.PI*2;actor.scale.setScalar(.14+ease*.86)}if(u<1)requestAnimationFrame(step);else{actor.position.copy(destination);actor.rotation.y=0;actor.scale.setScalar(1);actor.userData.summoning=false;actor.userData.visual3D?.userData.setMode?.('idle');setTimeout(()=>{if(this.portalState==='judgment'||this.portalState==='reckoning')this.portalState='idle'},major?700:250)}};requestAnimationFrame(step);
-  }
-
-  portalExit(id, duration = 1550) {
-    const actor=this.actors.get(id);if(!actor)return Promise.resolve();
-    const visual=actor.userData.visual3D,start=actor.position.clone(),end=new THREE.Vector3(0,.42,0),celebrateUntil=performance.now()+480,started=celebrateUntil;actor.userData.departing=true;visual?.userData.setMode?.('victory');let launched=false;
-    return new Promise(resolve=>{const step=now=>{if(now<celebrateUntil){requestAnimationFrame(step);return}if(!launched){launched=true;visual?.userData.setMode?.('portal');this.createSkyBeam(end,0xd96cff,duration,1.35)}const u=Math.min(1,(now-started)/duration),ease=u<.5?2*u*u:1-Math.pow(-2*u+2,2)/2;actor.position.lerpVectors(start,end,ease);actor.position.y+=Math.sin(u*Math.PI)*1.15;actor.rotation.y+=.08;actor.scale.setScalar(1-u*.82);if(u<1)requestAnimationFrame(step);else{actor.userData.departing=false;const remove=actor.userData.pendingRemoval;actor.userData.pendingRemoval=false;if(remove)this.removeActor(id);resolve()}};requestAnimationFrame(step)});
-  }
 
   animateActor(id, from, to, duration = 320) {
     const actor = this.actors.get(id);
@@ -1395,9 +1392,13 @@ export class TabokTrue3DBoard {
     }
     this.controls.update();
     const cinematic=this.summonCinematic,cinematicAge=cinematic?(now-cinematic.started):Infinity,cinematicLive=cinematicAge<cinematic?.duration;
-    const majorStorm=cinematicLive&&cinematic.major,panic=majorStorm?Math.sin(Math.min(1,cinematicAge/700)*Math.PI):0,flash=majorStorm&&Math.sin(cinematicAge*.075)>.88?1:0;
+    const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const majorStorm=cinematicLive&&cinematic.major&&!reducedMotion;
+    const stormProgress=cinematicLive?cinematicAge/cinematic.duration:1;
+    const flash=majorStorm?Math.max(...[.15,.3,.49].map(at=>Math.max(0,1-Math.abs(stormProgress-at)*65))):0;
     this.hemisphereLight.intensity=majorStorm ? .12 : .78;this.ambientLight.intensity=majorStorm ? .025 : .16;this.moonLight.intensity=majorStorm?(flash?7.5:.38):4.25;this.rimLight.intensity=majorStorm?(flash?6.5:.35):2.05;
-    this.canvas.style.transform=cinematicLive?'translate('+(Math.sin(now*.091)*(majorStorm?3.8:1.8)).toFixed(2)+'px,'+(Math.cos(now*.117)*(majorStorm?3.1:1.4)).toFixed(2)+'px)':'';
+    const shake=cinematicLive&&!reducedMotion?(majorStorm?flash:Math.max(0,1-cinematicAge/400)):0;
+    this.canvas.style.transform=shake?'translate('+(Math.sin(now*.091)*shake*3).toFixed(2)+'px,'+(Math.cos(now*.117)*shake*2).toFixed(2)+'px)':'';
     if(cinematic&&!cinematicLive){this.summonCinematic=null;this.canvas.style.transform=''}
     this.templeLights.forEach(entry => {
       const flicker = 1 + Math.sin(time * 7.7 + entry.phase) * .055 + Math.sin(time * 13.1 + entry.phase * 1.7) * .026;
@@ -1476,7 +1477,7 @@ export class TabokTrue3DBoard {
     if (now - this.lastActorModelUpdateAt >= actorInterval) {
       this.actorRoot.children.forEach(actor => {
         const visual = actor.userData.visual3D;
-        if (!visual?.userData.update) return;
+        if (!visual?.userData.update || visual.userData.cinematicFrozen) return;
         if (actor.userData.summonUntil && now >= actor.userData.summonUntil) {
           actor.userData.summonUntil = 0;
           visual.userData.setMode?.('idle');
@@ -1486,6 +1487,9 @@ export class TabokTrue3DBoard {
       this.lastActorModelUpdateAt = now;
     }
     this.transientEffects=this.transientEffects.filter(effect=>{const u=(now-effect.started)/effect.duration;if(u>=1){this.effectRoot.remove(effect.root);disposeObject(effect.root);return false}const fade=Math.sin(Math.min(1,u)*Math.PI);effect.root.scale.setScalar(.72+u*.55);effect.material.opacity=effect.type==='lightning'?Math.max(0,1-u*1.3):fade*.82;if(effect.ringMaterial)effect.ringMaterial.opacity=fade*.9;if(effect.rings)effect.rings.forEach((ring,index)=>ring.scale.setScalar(1+u*(2.2+index*.35)));if(effect.light)effect.light.intensity*=(effect.type==='lightning' ? .72 : .94);return true});
+    // Anchor the compact judgment on first load too, before any event is played.
+    if (!this.cinematics) this.cinematics = new PortalCinematics(this, worldFor, disposeObject);
+    this.cinematics.update(now);
     this.renderer.render(this.scene, this.camera);
   }
 }

@@ -244,9 +244,11 @@
     if (data.type === 'room') {
       room = data.room;
       normalizeRoom();
-      if (room.phase === 'lobby') renderRoom(); else { setup.classList.add('hidden'); renderChat(); }
+      if (room.phase === 'lobby') {resetPortalVisuals();renderRoom();} else { setup.classList.add('hidden'); renderChat(); }
     } else if (data.type === 'game') {
       applyGameSnapshot(data.snapshot);
+    } else if (data.type === 'visual-event') {
+      window.TabokReceiveVisual?.(data.event);
     } else if (data.type === 'ui') {
       applyUI(data.ui);
     } else if (data.type === 'notice') showRoomNotice(data.text);
@@ -616,7 +618,7 @@
   function broadcastUI() { if(isHost&&room?.phase==='game')broadcast({type:'ui',ui:captureUI()}); }
   function installHostObservers() {
     const observer = new MutationObserver(() => queueUI());
-    [els.dice,els.controls,els.instruction,els.event,els.turnRoll,els.message,els.portal].forEach(node => observer.observe(node,{subtree:true,childList:true,attributes:true,characterData:true}));
+    [els.dice,els.controls,els.instruction,els.event,els.turnRoll,els.message,els.portal].filter(Boolean).forEach(node => observer.observe(node,{subtree:true,childList:true,attributes:true,characterData:true}));
   }
 
   function localOwnsSlot(slot) { return seatForSlot(slot)?.owner === token; }
@@ -728,7 +730,7 @@
     if(!room)return renderLanding();
     if(room.phase==='game'&&isHost){
       if(!confirm('Return every connected player to the lobby and abandon this expedition?'))return;
-      clearTimeout(cpuTimer);clearTimeout(portalRevealTimer);clearTimeout(actionAutoTimer);clearTimeout(ruinEventTimer);busy=false;game=null;room.phase='lobby';room.seats.forEach(s=>s.roll=null);broadcastLobby();renderRoom();scheduleCPURolls();pauseAmbient(true);
+      clearTimeout(cpuTimer);clearTimeout(portalRevealTimer);clearTimeout(actionAutoTimer);clearTimeout(ruinEventTimer);busy=false;resetPortalVisuals();game=null;room.phase='lobby';room.seats.forEach(s=>s.roll=null);broadcastLobby();renderRoom();scheduleCPURolls();pauseAmbient(true);
     }else if(room.phase==='game'){showRoomNotice('Only the host can reset the expedition.');}
     else renderRoom();
   };
@@ -739,5 +741,6 @@
   setPill('MULTIPLAYER READY','waiting');
   window.TabokCanViewTurnRoll=localCanViewTurnRoll;
   window.TabokRoute3DHex=route3DHex;
+  window.TabokBroadcastVisual=event=>{if(isHost&&room?.phase==='game'){broadcast({type:'visual-event',event});queueSnapshot();}};
   window.TabokMultiplayer={get room(){return room},get isHost(){return isHost},canViewActiveRoll:localCanViewTurnRoll,version:VERSION};
 })();
