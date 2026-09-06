@@ -215,13 +215,40 @@ function equipment(r,m,d){
 
 function animate(root,r,d,secondary){
   let mode='idle',start=null;const rest=new Map();for(const b of Object.values(r)){if(b?.isObject3D)rest.set(b,{p:b.position.clone(),q:b.quaternion.clone()});}
-  root.userData.rig=r;root.userData.movementStyle=d.move;
+  const identity=['Misty','Cliff','Paige','Justin','Sue','Wanday'].indexOf(d.name),idleSpan=6.4;
+  root.userData.rig=r;root.userData.movementStyle=d.move;root.userData.idleBehaviorCount=30;
   root.userData.setMode=value=>{mode=value==='celebrate'?'victory':value;start=null;};
   root.userData.update=time=>{
     if(start===null)start=time;const age=time-start,breathe=Math.sin(time*1.9),cycle=Math.sin(age*9),pulse=Math.sin(Math.min(age/1.2,1)*Math.PI);
     for(const [bone,state]of rest){bone.position.copy(state.p);bone.quaternion.copy(state.q);}r.model.scale.setScalar(d.name==='Justin'?1.06:1);
-    r.torso.rotation.x=breathe*.008;r.torso.rotation.y=-.06;r.head.rotation.y=.06+Math.sin(time*.57)*.035;r.leftArm.rotation.z=-.095;r.rightArm.rotation.z=.075;r.leftForearm.rotation.x=-.18;r.rightForearm.rotation.x=-.14;r.leftLeg.rotation.z=.035;r.rightLeg.rotation.z=-.035;
-    if(mode==='move'){
+    r.torso.rotation.x=breathe*.008;r.torso.rotation.y=-.06;r.head.rotation.y=.06+Math.sin(time*.57)*.035;r.leftArm.rotation.z=-.095;r.rightArm.rotation.z=.075;r.leftForearm.rotation.x=-.18;r.rightForearm.rotation.x=-.14;r.leftLeg.rotation.z=.035;r.rightLeg.rotation.z=-.035;secondary.hair.rotation.z=Math.sin(time*1.6)*.045;if(secondary.lantern)secondary.lantern.rotation.z=Math.sin(time*1.65)*.07;
+    if(mode==='idle'){
+      // Thirty low-cost, layered behaviors per Traveler: fifteen gesture families,
+      // mirrored and personality-weighted. Only one quiet gesture blooms at a time.
+      const shifted=time+identity*1.17,index=(Math.floor(shifted/idleSpan)*7+identity*11)%30,phase=(shifted%idleSpan)/idleSpan;
+      const gesture=phase>.17&&phase<.87?Math.sin((phase-.17)/.7*Math.PI)**2:0,side=index<15?-1:1,variant=index%15,amp=(.75+identity*.035)*gesture;
+      if(variant===0){r.head.rotation.y+=side*.48*amp;r.head.rotation.x-=.05*amp;}
+      else if(variant===1){r.head.rotation.x+=.18*amp;r.torso.rotation.x+=.035*amp;}
+      else if(variant===2){r.torso.rotation.y+=side*.18*amp;r.head.rotation.y-=side*.22*amp;}
+      else if(variant===3){r.rightArm.rotation.x-=.72*amp;r.rightForearm.rotation.x-=.55*amp;r.head.rotation.y+=.17*amp;}
+      else if(variant===4){r.leftArm.rotation.x-=.68*amp;r.leftForearm.rotation.x-=.58*amp;r.head.rotation.y-=.17*amp;}
+      else if(variant===5){r.leftArm.rotation.z-=.24*amp;r.rightArm.rotation.z+=.24*amp;r.torso.rotation.x-=.055*amp;}
+      else if(variant===6){r.hips.rotation.y+=side*.095*amp;r.leftLeg.rotation.z+=side*.055*amp;r.rightLeg.rotation.z+=side*.055*amp;}
+      else if(variant===7){r.torso.rotation.x+=.10*amp;r.head.rotation.x-=.15*amp;r.leftKnee.rotation.x+=.12*amp;}
+      else if(variant===8){r.rightArm.rotation.z+=.38*amp;r.rightForearm.rotation.x-=.45*amp;r.head.rotation.y+=side*.12*amp;}
+      else if(variant===9){r.leftArm.rotation.z-=.38*amp;r.leftForearm.rotation.x-=.4*amp;r.head.rotation.x+=.08*amp;}
+      else if(variant===10){r.head.rotation.x-=.13*amp;r.head.rotation.z=side*.08*amp;}
+      else if(variant===11){r.torso.rotation.x-=.10*amp;r.leftArm.rotation.z-=.34*amp;r.rightArm.rotation.z+=.34*amp;}
+      else if(variant===12){r.rightArm.rotation.x-=1.05*amp;r.rightForearm.rotation.x+=.25*amp;r.head.rotation.y+=side*.25*amp;}
+      else if(variant===13){r.leftArm.rotation.x-=.8*amp;r.leftForearm.rotation.x-=.18*amp;r.torso.rotation.y-=side*.16*amp;}
+      else {r.model.position.y+=.045*amp;r.hips.rotation.y+=Math.sin(phase*Math.PI*4)*.05*amp;r.head.rotation.y-=side*.3*amp;}
+      if(d.name==='Misty')secondary.hair.rotation.z+=side*.09*amp;
+      if(d.name==='Cliff'&&(variant===3||variant===10))r.rightHand.rotation.z-=.22*amp;
+      if(d.name==='Paige'&&secondary.lantern)secondary.lantern.rotation.z+=side*.28*amp;
+      if(d.name==='Justin'&&(variant===5||variant===11)){r.leftArm.rotation.z-=.2*amp;r.torso.rotation.x-=.04*amp;}
+      if(d.name==='Sue'&&(variant===3||variant===12))r.rightHand.rotation.z+=side*.5*amp;
+      if(d.name==='Wanday'&&(variant===4||variant===9)){r.rightArm.rotation.z+=.22*amp;r.head.rotation.x-=.1*amp;}
+    }else if(mode==='move'){
       if(d.move==='walk'){r.leftLeg.rotation.x=cycle*.34;r.rightLeg.rotation.x=-cycle*.34;r.leftKnee.rotation.x=Math.max(0,-cycle)*.5;r.rightKnee.rotation.x=Math.max(0,cycle)*.5;r.leftArm.rotation.x=-cycle*.2;r.rightArm.rotation.x=cycle*.2;r.hips.rotation.y=cycle*.035;}
       else if(d.move==='jump'){const u=Math.min(age/.45,1);r.model.position.y=Math.sin(u*Math.PI)*.25;r.leftLeg.rotation.x=-.15;r.rightKnee.rotation.x=.4;r.leftArm.rotation.z=-.22;r.rightArm.rotation.z=.22;}
       else{r.model.position.y=.035;r.model.rotation.x=-.035;r.leftArm.rotation.z=-.13;r.rightArm.rotation.z=.13;}
@@ -230,9 +257,10 @@ function animate(root,r,d,secondary){
     else if(mode==='give'){r.torso.rotation.y=.19*pulse;r.rightArm.rotation.x=-1.2*pulse;r.rightForearm.rotation.x=-.3*(1-pulse);}
     else if(mode==='steal'||mode==='receive'){const pull=Math.sin(Math.min(age,1)*Math.PI);r.leftArm.rotation.x=-1*pull;r.rightArm.rotation.x=-1*pull;r.leftForearm.rotation.x=-.85*pull;r.rightForearm.rotation.x=-.85*pull;r.torso.rotation.x=-.10*pull;}
     else if(mode==='rune'){r.leftArm.rotation.z=-.85*pulse;r.rightArm.rotation.z=.85*pulse;r.leftForearm.rotation.x=-.5*pulse;r.rightForearm.rotation.x=-.5*pulse;r.model.position.y=.12*pulse;r.head.rotation.x=-.12*pulse;}
+    else if(mode==='blast'){const flail=Math.sin(age*16),kick=Math.sin(age*13+1.2);r.torso.rotation.x=-.2;r.leftArm.rotation.z=-.95+flail*.24;r.rightArm.rotation.z=.95-flail*.22;r.leftArm.rotation.x=flail*.42;r.rightArm.rotation.x=-flail*.39;r.leftForearm.rotation.x=-.34+flail*.5;r.rightForearm.rotation.x=-.34-flail*.5;r.leftLeg.rotation.x=kick*.48;r.rightLeg.rotation.x=-kick*.48;r.leftKnee.rotation.x=.2+Math.max(0,-kick)*.5;r.rightKnee.rotation.x=.2+Math.max(0,kick)*.5;r.head.rotation.z=flail*.13;}
     else if(mode==='victory'){r.rightArm.rotation.z=.8;r.rightArm.rotation.x=-.28;r.leftArm.rotation.z=-.35;r.torso.rotation.x=-.07;r.head.rotation.x=-.09;}
     else if(mode==='portal'){const u=Math.min(age/1.2,1);r.model.position.y=Math.sin(u*Math.PI)*.35;r.model.rotation.x=-u*.34;r.leftLeg.rotation.x=-.3;r.rightKnee.rotation.x=.5;r.leftArm.rotation.z=-.4;r.rightArm.rotation.z=.4;}
-    secondary.cape.rotation.x=Math.sin(time*1.15)*.028+(mode==='move'?.12:0);secondary.hair.rotation.z=Math.sin(time*1.6)*.045;if(secondary.lantern)secondary.lantern.rotation.z=Math.sin(time*1.65)*.07;
+    secondary.cape.rotation.x=Math.sin(time*1.15)*.028+(mode==='move'?.12:0);
   };
 }
 

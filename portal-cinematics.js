@@ -71,7 +71,7 @@ export class PortalCinematics {
     this.label.append(kicker, title);
     this.label.classList.add('visible');
     board.portalState = event.type === 'crossing' ? 'crossing' : event.type === 'rejection' ? 'rejected' : event.type === 'fireball' ? 'rejected' : 'reckoning';
-    visual?.userData.setMode?.(event.type === 'crossing' ? 'victory' : event.type === 'rejection' ? 'receive' : event.type === 'fireball' ? 'rune' : 'summon');
+    visual?.userData.setMode?.(event.type === 'crossing' ? 'victory' : event.type === 'rejection' ? 'blast' : event.type === 'fireball' ? 'rune' : 'summon');
     if (event.type === 'major' || event.type === 'minor') {
       actor.position.copy(ORIGIN); actor.position.y = -.9; actor.scale.setScalar(.02);
       board.summonCinematic = {major:event.type === 'major', started:task.started, duration:task.duration};
@@ -153,10 +153,11 @@ export class PortalCinematics {
       });
       board.portalDomeMaterial.uniforms.uPower.value += charge * (1-flight) * 1.5;
     } else if(event.type==='pounce'){
-      const enter=smooth(u/.38),exit=smooth((u-.46)/.5);
+      const enter=smooth(u/.34),exit=smooth((u-.58)/.34);
       actor.position.lerpVectors(task.start,ORIGIN,enter);
-      if(u>=.46)actor.position.lerpVectors(ORIGIN,task.end,exit);
-      actor.position.y+=Math.sin((u<.46?enter:exit)*Math.PI)*(this.reduced?.18:1.15);
+      actor.visible=u<.36||u>=.58;
+      if(u>=.58){actor.position.copy(task.end);actor.position.y+=THREE.MathUtils.lerp(this.reduced?.35:2.5,0,exit)+Math.sin(exit*Math.PI)*(this.reduced?.08:.34);}
+      else actor.position.y+=Math.sin(enter*Math.PI)*(this.reduced?.18:1.15);
       actor.rotation.y=task.rotation.y+u*Math.PI*2;
       if(task.telegraph){task.telegraph.material.opacity=.35+.45*Math.sin(u*Math.PI*8)**2;task.telegraph.scale.setScalar(.85+u*.25);}
       this.impulse(task,'rift-in',.32,u,()=>board.createSkyBeam(ORIGIN,0xe27aff,450,.55));

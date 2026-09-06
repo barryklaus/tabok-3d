@@ -49,10 +49,11 @@ export function sculptMinor(){
   const tail=joint(chest,'tail',[0,-.16,-.96]);
   tube(tail,m.hide,[[0,0,0],[.17,-.06,-.35],[.37,.03,-.66],[.42,.12,-.92]],[.20,.16,.085,.009],10);
   for(let i=0;i<3;i++)horn(tail,m.horn,[[i*.11,-.025,-i*.23],[i*.11,.18,-i*.23-.05],[i*.11,.23,-i*.23-.12],[i*.11,.25,-i*.23-.19]],.069);
-  let mode='idle';root.userData.setMode=v=>mode=v;root.userData.rig={body,chest,head,jaw,legs,tail};
+  let mode='idle';root.userData.setMode=v=>mode=v;root.userData.rig={body,chest,head,jaw,legs,tail};root.userData.idleBehaviorCount=18;
   root.userData.update=t=>{
-    const moving=mode==='move',summon=mode==='summon';chest.position.y=.88+Math.sin(t*1.8)*.015;head.rotation.x=(summon?-.15:0)+Math.sin(t*.83)*.035;jaw.rotation.x=summon?.27:.03;tail.rotation.y=Math.sin(t*.95)*.15;
-    legs.forEach(({leg,knee},i)=>{const step=Math.sin(t*8+i*Math.PI*.85);leg.rotation.x=moving?step*.24:Math.sin(t+i)*.012;knee.rotation.x=moving?Math.max(0,step)*.25:0;});
+    const moving=mode==='move',summon=mode==='summon';body.position.y=0;body.rotation.set(0,0,0);chest.rotation.set(0,0,0);chest.position.y=.88+Math.sin(t*1.8)*.015;head.rotation.set((summon?-.15:0)+Math.sin(t*.83)*.035,0,0);jaw.rotation.x=summon?.27:.03;tail.rotation.y=Math.sin(t*.95)*.15;
+    legs.forEach(({leg,knee},i)=>{const step=Math.sin(t*8+i*Math.PI*.85);leg.rotation.x=moving?step*.24:Math.sin(t+i)*.012;leg.rotation.z=0;knee.rotation.x=moving?Math.max(0,step)*.25:0;});
+    if(!moving&&!summon){const span=5.8,index=Math.floor(t/span)*5%18,phase=t%span/span,g=phase>.2&&phase<.86?Math.sin((phase-.2)/.66*Math.PI)**2:0,side=index<9?-1:1,kind=index%9;if(kind===0){head.rotation.y=side*.48*g;head.rotation.x-=.09*g;}else if(kind===1){jaw.rotation.x+=.38*g;head.rotation.x-=.15*g;}else if(kind===2){chest.rotation.z=side*.07*g;tail.rotation.y+=side*.42*g;}else if(kind===3){chest.position.y-=.11*g;legs.forEach(({leg},i)=>leg.rotation.z=(i%2?1:-1)*.08*g);}else if(kind===4){head.rotation.z=side*.1*g;jaw.rotation.x+=.14*g;}else if(kind===5){tail.rotation.y+=Math.sin(phase*Math.PI*7)*.32*g;}else if(kind===6){chest.rotation.x=-.09*g;head.rotation.x+=.16*g;}else if(kind===7){legs.forEach(({leg},i)=>leg.rotation.x+=Math.sin(i+phase*Math.PI*4)*.12*g);}else{body.position.y=Math.sin(phase*Math.PI*5)*.045*g;head.rotation.y=side*.25*g;}}
     m.rune.emissiveIntensity=.95+(Math.sin(t*2)+1)*.18;m.hot.emissiveIntensity=summon?2:1.3;
   };
   return finish(root);
@@ -127,11 +128,12 @@ export function sculptMajor(){
     scar(stone,m.rune,[[0,.19,.143],[-.03,.08,.143],[.03,-.05,.143],[0,-.22,.143]]);
     tube(stone,m.gold,[[-.07,.16,.145],[.07,.06,.145],[-.06,-.10,.145]],[.011,.013,.008],5);
   }
-  let mode='idle';root.userData.setMode=v=>mode=v;root.userData.rig={body,hips,torso,head,arms,legs,cape};
+  let mode='idle';root.userData.setMode=v=>mode=v;root.userData.rig={body,hips,torso,head,arms,legs,cape};root.userData.idleBehaviorCount=24;
   root.userData.update=t=>{
-    const summon=mode==='summon',moving=mode==='move';torso.rotation.y=Math.sin(t*.53)*.02;head.rotation.y=Math.sin(t*.61)*.06;cape.rotation.x=Math.sin(t*.9)*.027+(moving?.08:0);
-    arms.forEach(({arm,elbow},i)=>{const side=i===0?-1:1;arm.rotation.z=side*(summon?.73:.07)+Math.sin(t*.8)*.025;elbow.rotation.x=summon?-.35:-.12;});
+    const summon=mode==='summon',moving=mode==='move';body.position.y=0;body.rotation.set(0,0,0);hips.rotation.set(0,0,0);torso.rotation.set(0,Math.sin(t*.53)*.02,0);head.rotation.set(0,Math.sin(t*.61)*.06,0);cape.rotation.set(Math.sin(t*.9)*.027+(moving?.08:0),0,0);
+    arms.forEach(({arm,elbow},i)=>{const side=i===0?-1:1;arm.rotation.set(0,0,side*(summon?.73:.07)+Math.sin(t*.8)*.025);elbow.rotation.set(summon?-.35:-.12,0,0);});
     legs.forEach(({leg,knee},i)=>{const step=Math.sin(t*6+i*Math.PI);leg.rotation.x=moving?step*.20:0;knee.rotation.x=moving?Math.max(0,-step)*.23:0;});
+    if(!moving&&!summon){const span=7.2,index=Math.floor((t+.9)/span)*7%24,phase=(t+.9)%span/span,g=phase>.16&&phase<.88?Math.sin((phase-.16)/.72*Math.PI)**2:0,side=index<12?-1:1,kind=index%12;if(kind===0){head.rotation.y+=side*.55*g;}else if(kind===1){torso.rotation.x=-.08*g;arms.forEach(({arm},i)=>arm.rotation.z+=(i?1:-1)*.23*g);}else if(kind===2){arms[side<0?0:1].arm.rotation.x=-.7*g;arms[side<0?0:1].elbow.rotation.x=-.55*g;}else if(kind===3){head.rotation.x=-.18*g;hips.rotation.y=side*.1*g;}else if(kind===4){arms.forEach(({arm,elbow},i)=>{arm.rotation.x=-.5*g;elbow.rotation.x=-.45*g;});}else if(kind===5){cape.rotation.z=side*.045*g;torso.rotation.y+=side*.14*g;}else if(kind===6){body.position.y=.12*g;arms.forEach(({arm},i)=>arm.rotation.z+=(i?1:-1)*.35*g);}else if(kind===7){legs.forEach(({leg,knee},i)=>{leg.rotation.x+=(i?1:-1)*.09*g;knee.rotation.x=.12*g;});}else if(kind===8){head.rotation.z=side*.08*g;torso.rotation.x=.06*g;}else if(kind===9){arms[side<0?1:0].arm.rotation.z+=side*.45*g;head.rotation.y-=side*.25*g;}else if(kind===10){torso.rotation.y+=Math.sin(phase*Math.PI*4)*.09*g;head.rotation.y-=Math.sin(phase*Math.PI*4)*.12*g;}else{body.rotation.y=side*.07*g;cape.rotation.x+=.13*g;}}
     shards.forEach((s,i)=>{const a=i/5*Math.PI*2+Math.PI*.1;s.position.set(Math.cos(a)*1.04,Math.sin(a)*.55+Math.sin(t*1.1+i)*.04,0);s.rotation.z=a-Math.PI/2+Math.sin(t+i)*.04;});
     core.rotation.y=Math.sin(t)*.1;m.rune.emissiveIntensity=(summon?1.8:.95)+Math.sin(t*2.3)*.16;
   };

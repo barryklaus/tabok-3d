@@ -19,6 +19,8 @@ body:has(#messageOverlay.portal-local:not(.hidden))>.shell{visibility:visible!im
 #messageOverlay.portal-local .portal-pattern{display:flex!important;justify-content:center!important;gap:1px!important;white-space:nowrap!important}
 #messageOverlay.portal-local .rune-digit{flex:0 1 24px!important;min-width:0!important;width:24px!important;height:31px!important;font:700 21px/31px Georgia,serif!important}
 #messageOverlay.portal-local .rune-separator{font-size:8px!important;margin:0!important;line-height:31px!important}
+.rune-digit.number-rolling{color:#fff3ff!important;filter:blur(.45px) brightness(1.45);transform:translateY(-1px) scale(1.06);text-shadow:0 0 7px #fff,0 0 18px #ee70dd!important}
+.rune-digit.number-landed{animation:portalNumberLand .42s cubic-bezier(.15,.85,.2,1) both}
 #messageOverlay.portal-local .portal-replace{min-height:39px!important;padding:5px 2px!important;letter-spacing:0!important}
 #messageOverlay.portal-local .portal-replace span{font-size:9px!important;letter-spacing:0!important}
 #messageOverlay.portal-local .portal-replace small{font-size:7px!important;letter-spacing:0!important}
@@ -40,6 +42,7 @@ body:has(#messageOverlay.portal-local:not(.hidden))>.shell{visibility:visible!im
 .portal-magic-words[data-kind=fireball]{color:#ffd39b;text-shadow:0 2px 6px #000,0 0 14px #ff7229,0 0 28px #b51f17}
 @keyframes portalCardArrive{from{opacity:0;translate:0 12px}to{opacity:1;translate:0 0}}
 @keyframes portalWordsRise{from{opacity:0;translate:0 20px}to{opacity:1;translate:0 0}}
+@keyframes portalNumberLand{0%{transform:scale(1.22);filter:brightness(2.1);box-shadow:0 0 20px #f5a9ec}100%{transform:none;filter:none}}
 @media(max-width:500px){#messageOverlay.portal-local .dialog{left:50vw;top:clamp(72px,calc(var(--portal-screen-y,50dvh) - 310px),calc(100dvh - 340px));width:min(340px,calc(100vw - 16px))!important;max-height:min(330px,calc(100dvh - 90px))!important;padding:12px!important}.portal-magic-words{left:50vw}}
 @media(max-height:500px){#messageOverlay.portal-local .dialog{top:64px!important;max-height:calc(100dvh - 76px)!important;width:340px!important}#messageOverlay.portal-local h2{font-size:18px!important}.portal-magic-words{top:max(105px,calc(var(--portal-screen-y,50dvh) - 40px))}}
 @media(prefers-reduced-motion:reduce){.portal-magic-words.visible,#messageOverlay.portal-local .dialog{animation:none!important}}

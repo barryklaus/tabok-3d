@@ -1,6 +1,29 @@
 # TABOK — True 3D Board Alpha
 
-Version: **v0.51.0 — Rift Hunt · 2026.09.06.G1**
+Version: **v0.52.0 — Living Diorama · 2026.09.07.G2**
+
+## Living Diorama animation pass
+
+- Each Traveler now cycles through 30 layered, personality-weighted idle
+  behaviors. The variations combine head tracking, stance changes, equipment
+  checks, guarded poses, gestures, and class-specific prop movement without
+  loading additional animation files.
+- Riftback Minor Monsters use 18 stalking, snapping, crouching, scraping, and
+  tail-driven idle variations. The Ruin Sovereign uses 24 slower threat,
+  channeling, surveying, crown, and posture behaviors.
+- Idle gestures are staggered by character identity and separated by quiet
+  breathing windows, preventing the board from animating noisily in unison.
+- Rift Pounce now visibly enters the Portal, disappears inside it, and reappears
+  above the selected landing hex before dropping onto the board.
+- Rejected Travelers use a dedicated blasted-away pose with independently
+  flailing arms and legs throughout the Portal knockback.
+- Portal judgment reveals its three cards sequentially. Each card flips, its
+  three digits cycle, the cycling slows dramatically, and the final requirement
+  locks with a magical impact. A successful match now completes this reveal
+  before the Traveler performs the 3D crossing leap.
+
+These behaviors reuse the existing articulated geometry and update loop. They
+add no textures, videos, downloaded models, lights, or draw calls.
 
 ## Rift Hunt gameplay rework
 

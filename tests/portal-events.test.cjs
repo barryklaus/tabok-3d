@@ -92,3 +92,20 @@ test('Rift Hunt rules use four Hearts, x2 Minors, fourth-rejection Major and bou
  assert.match(html,/applyDamage\(impact\.target,2,'Major Fireball '/);
  assert.ok(!html.includes('Color Attack'));
 });
+
+test('Living Diorama stages idles, portal cards, Pounce concealment and rejection flailing',()=>{
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ const travelers=fs.readFileSync(path.join(root,'sculpted-travelers.js'),'utf8');
+ const monsters=fs.readFileSync(path.join(root,'sculpted-monsters.js'),'utf8');
+ const cinematics=fs.readFileSync(path.join(root,'portal-cinematics.js'),'utf8');
+ assert.match(travelers,/idleBehaviorCount=30/);
+ assert.match(travelers,/mode==='blast'/);
+ assert.match(monsters,/idleBehaviorCount=18/);
+ assert.match(monsters,/idleBehaviorCount=24/);
+ assert.match(cinematics,/event\.type === 'rejection' \? 'blast'/);
+ assert.match(cinematics,/actor\.visible=u<\.36\|\|u>=\.58/);
+ assert.match(html,/data-final=/);
+ assert.match(html,/820\+index\*1380/);
+ assert.match(html,/Math\.pow\(progress,3\.8\)\*330/);
+ assert.match(html,/p\.name\+' finds a path'/);
+});
