@@ -1,12 +1,45 @@
 # TABOK — True 3D Board Alpha
 
-Version: **v0.46.1 True 3D Alpha — Continuous Portal**
+Version: **v0.49.0 — Sculpted Ruins · 2026.09.06.S1**
+
+## Sculpted Ruins cast
+
+The live board now uses the redesigned six Travelers and both Monsters. Open
+`cast-showcase.html` to rotate every model under neutral studio lighting and
+preview movement, dice, treasure, Rune, victory, Portal and summon states.
+
+- Travelers have shaped jaws and brows, swept hair, fitted layered clothing,
+  curved breastplates, edge trim, buckles, finger geometry and grip-mounted equipment.
+- Each class retains its color identity and signature gear: Misty's scarf,
+  Cliff's spectacles and tome, Paige's braid and lantern, Justin's sun shield,
+  Sue's twin daggers, and Wanday's crystal staff and expedition pack.
+- The Riftback has overlapping curved shell plates, swept horns, mandibles,
+  articulated quadruped limbs and a segmented tail.
+- The Ruin Sovereign has an exposed rib cage and rift core, clawed hands,
+  layered obsidian armor, ragged mantle and a broken floating crown.
+- Material response separates metal, cloth, leather, skin, bone and stone.
+  Shared 256-pixel procedural albedo, bump and roughness maps add surface detail.
+- Static details are merged by material within each joint: 40–69 mesh draws and
+  approximately 19,000–29,000 triangles per model. No new per-character lights,
+  downloaded model assets or post-processing passes are required.
+- New materials owned by an actor are disposed when that actor leaves the board;
+  shared texture maps remain cached for the other models.
+
+These are stylized procedural real-time models with articulated rigid-part Bone
+hierarchies. They are not film-resolution sculpts or deformable skinned GLB assets.
+Board-scale readability and browser cost remain design constraints. Frame rate
+depends on the device, resolution and complete scene, not model complexity alone.
+
+Validation: all eight actors tested across eleven animation states for finite
+geometry and transforms, connected arm joints, silhouette and draw budgets.
+The real-board fixture also checks model creation, movement continuity, summon
+and pickup effects, and actor material disposal.
 
 ## Complete 3D Traveler gallery
 
 Open `character-3d-pilot.html` to inspect all six true-3D Traveler studies. Misty, Cliff, Paige, Justin, Sue, and Wanday each use lightweight browser-native geometry, distinctive equipment, character-colored lighting, idle motion, and a Portal-victory animation. Select a Traveler, drag to orbit, scroll or pinch to zoom, and use the presentation controls to compare poses.
 
-The gallery is deliberately isolated from the live game. It tests silhouette, materials, lighting, animation, and browser performance without replacing the existing illustrated character artwork.
+The legacy gallery and the new cast showcase use the same model factories as the live board. The illustrated interface portraits are retained.
 
 All six models use connected neck, shoulder, hip, and upper-leg geometry so their stylized anatomy reads as a continuous figure from every orbit angle.
 
@@ -14,9 +47,9 @@ Waist cores now overlap the torso and pelvis instead of relying on loose costume
 
 ## 3D Monster gallery
 
-Open `monster-3d-pilot.html` to inspect the Riftback Minor Monster and the Ruin Sovereign Major Monster. The Riftback uses a low quadruped silhouette, layered rune shell, horns, claws, glowing eyes, and orbiting rubble. The Ruin Sovereign uses connected obsidian anatomy, ragged ritual robes, bronze crown and bindings, long clawed hands, and five animated rune monoliths inside a double energy halo.
+Open `monster-3d-pilot.html` or `cast-showcase.html` to inspect the Riftback Minor Monster and the Ruin Sovereign Major Monster. Both pages use the new Sculpted Ruins models described above.
 
-Both creatures include restrained idle motion and a more forceful summoning state. They remain isolated from live board gameplay until their scale and art direction are approved.
+Both creatures include restrained idle motion, articulated movement and a summoning state, and are active in live board gameplay.
 
 ## Living board interactions
 

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { createTravelerPilot } from './character-3d-travelers.js?v=20260906A2';
-import { createMonsterPilot } from './monster-3d-models.js?v=20260906A2';
+import { createTravelerPilot } from './character-3d-travelers.js?v=20260906S1';
+import { createMonsterPilot } from './monster-3d-models.js?v=20260906S1';
 
 const SQRT3 = Math.sqrt(3);
 const HEX_RADIUS = .72;
@@ -299,11 +299,12 @@ const FAULTLINE_FRAGMENT = `
 `;
 
 function disposeObject(root) {
+  const disposedMaterials = new Set();
   root.traverse(node => {
     if (node.geometry) node.geometry.dispose();
-    if (node.material && !node.userData.preserveMaterial) {
+    if (node.material && (!node.userData.preserveMaterial || node.userData.ownedActorMaterial)) {
       const materials = Array.isArray(node.material) ? node.material : [node.material];
-      materials.forEach(material => material.dispose());
+      materials.forEach(material => { if (!disposedMaterials.has(material)) { material.dispose(); disposedMaterials.add(material); } });
     }
   });
 }
