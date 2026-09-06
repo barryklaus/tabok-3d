@@ -1,6 +1,21 @@
 # TABOK — True 3D Board Alpha
 
-Version: **v0.53.0 — Grounded Legends · 2026.09.07.G3**
+Version: **v0.54.0 — Ground Contact · 2026.09.07.G4**
+
+## Ground Contact correction pass
+
+- Traveler and Minor Monster bounds are fitted to the true playable-tile top
+  after their complete transformed model is attached. The Major Monster's hover
+  clearance is reduced by half.
+- Sliding has been removed from Traveler locomotion. Entrance and rejection
+  destinations reset Travelers to face the Portal.
+- Actual Heart loss creates an animated overhead Heart counter and a short red
+  emissive character highlight. Fully blocked damage does not show lost Hearts.
+- The Major Mode die now has an EXTRA TURN face. It performs one immediate full
+  three-die reroll and second turn, capped once per Monster Phase.
+- The carried-pattern verdict waits until all three requirement cards and their
+  rolling numbers finish. A successful MATCH arrives last with a gold resonance
+  glow; NO MATCH uses a restrained danger treatment.
 
 ## Grounded Legends movement pass
 

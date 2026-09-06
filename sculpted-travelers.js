@@ -248,11 +248,10 @@ function animate(root,r,d,secondary){
       if(d.name==='Justin'&&(variant===5||variant===11)){r.leftArm.rotation.z-=.2*amp;r.torso.rotation.x-=.04*amp;}
       if(d.name==='Sue'&&(variant===3||variant===12))r.rightHand.rotation.z+=side*.5*amp;
       if(d.name==='Wanday'&&(variant===4||variant===9)){r.rightArm.rotation.z+=.22*amp;r.head.rotation.x-=.1*amp;}
-    }else if(['move','walk','run','slide','crouch','jump','acro'].includes(mode)){
+    }else if(['move','walk','run','crouch','jump','acro'].includes(mode)){
       const travelMode=mode==='move'?d.move:mode,runCycle=Math.sin(age*15),jumpU=Math.min(age/.38,1);
       if(travelMode==='walk'){r.leftLeg.rotation.x=cycle*.36;r.rightLeg.rotation.x=-cycle*.36;r.leftKnee.rotation.x=Math.max(0,-cycle)*.52;r.rightKnee.rotation.x=Math.max(0,cycle)*.52;r.leftArm.rotation.x=-cycle*.22;r.rightArm.rotation.x=cycle*.22;r.hips.rotation.y=cycle*.04;}
       else if(travelMode==='run'){r.torso.rotation.x=-.14;r.leftLeg.rotation.x=runCycle*.62;r.rightLeg.rotation.x=-runCycle*.62;r.leftKnee.rotation.x=Math.max(0,-runCycle)*.82;r.rightKnee.rotation.x=Math.max(0,runCycle)*.82;r.leftArm.rotation.x=-runCycle*.52;r.rightArm.rotation.x=runCycle*.52;r.model.position.y=Math.abs(runCycle)*.045;}
-      else if(travelMode==='slide'){r.model.position.y=-.20;r.torso.rotation.x=-.24;r.hips.rotation.y=.18;r.leftLeg.rotation.x=.42;r.rightLeg.rotation.x=-.16;r.leftKnee.rotation.x=.72;r.rightKnee.rotation.x=.28;r.leftArm.rotation.z=-.28;r.rightArm.rotation.z=.38;}
       else if(travelMode==='crouch'){r.model.position.y=-.16;r.torso.rotation.x=.18;r.leftLeg.rotation.x=-.18;r.rightLeg.rotation.x=-.18;r.leftKnee.rotation.x=.78;r.rightKnee.rotation.x=.78;r.leftArm.rotation.z=-.18;r.rightArm.rotation.z=.18;}
       else if(travelMode==='jump'){r.model.position.y=Math.sin(jumpU*Math.PI)*.34;r.leftLeg.rotation.x=-.18;r.rightKnee.rotation.x=.62;r.leftArm.rotation.z=-.34;r.rightArm.rotation.z=.34;}
       else if(travelMode==='acro'){const flip=Math.sin(jumpU*Math.PI);r.model.position.y=flip*.5;r.model.rotation.x=-jumpU*Math.PI*2;r.leftKnee.rotation.x=.68*flip;r.rightKnee.rotation.x=.68*flip;r.leftArm.rotation.z=-.48;r.rightArm.rotation.z=.48;}
@@ -265,7 +264,7 @@ function animate(root,r,d,secondary){
     else if(mode==='blast'){const flail=Math.sin(age*16),kick=Math.sin(age*13+1.2);r.torso.rotation.x=-.2;r.leftArm.rotation.z=-.95+flail*.24;r.rightArm.rotation.z=.95-flail*.22;r.leftArm.rotation.x=flail*.42;r.rightArm.rotation.x=-flail*.39;r.leftForearm.rotation.x=-.34+flail*.5;r.rightForearm.rotation.x=-.34-flail*.5;r.leftLeg.rotation.x=kick*.48;r.rightLeg.rotation.x=-kick*.48;r.leftKnee.rotation.x=.2+Math.max(0,-kick)*.5;r.rightKnee.rotation.x=.2+Math.max(0,kick)*.5;r.head.rotation.z=flail*.13;}
     else if(mode==='victory'){r.rightArm.rotation.z=.8;r.rightArm.rotation.x=-.28;r.leftArm.rotation.z=-.35;r.torso.rotation.x=-.07;r.head.rotation.x=-.09;}
     else if(mode==='portal'){const u=Math.min(age/1.2,1);r.model.position.y=Math.sin(u*Math.PI)*.35;r.model.rotation.x=-u*.34;r.leftLeg.rotation.x=-.3;r.rightKnee.rotation.x=.5;r.leftArm.rotation.z=-.4;r.rightArm.rotation.z=.4;}
-    secondary.cape.rotation.x=Math.sin(time*1.15)*.028+(['move','walk','run','slide','crouch','jump','acro'].includes(mode)?.12:0);
+    secondary.cape.rotation.x=Math.sin(time*1.15)*.028+(['move','walk','run','crouch','jump','acro'].includes(mode)?.12:0);
   };
 }
 

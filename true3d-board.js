@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { createTravelerPilot } from './character-3d-travelers.js?v=20260907G3';
-import { createMonsterPilot } from './monster-3d-models.js?v=20260907G3';
-import { PortalCinematics } from './portal-cinematics.js?v=20260907G3';
+import { createTravelerPilot } from './character-3d-travelers.js?v=20260907G4';
+import { createMonsterPilot } from './monster-3d-models.js?v=20260907G4';
+import { PortalCinematics } from './portal-cinematics.js?v=20260907G4';
 
 const SQRT3 = Math.sqrt(3);
 const HEX_RADIUS = .72;
@@ -35,7 +35,8 @@ function worldFor(id) {
   if (id === 'PORTAL') return new THREE.Vector3(0, .16, 0);
   const { q, r } = parse(id);
   const rr = r - 11;
-  return new THREE.Vector3(SQRT3 * (q + rr / 2) * HEX_RADIUS, .16, 1.5 * rr * HEX_RADIUS);
+  // Playable tile centers sit at y=.02 with .18 height: their true top is .11.
+  return new THREE.Vector3(SQRT3 * (q + rr / 2) * HEX_RADIUS, .11, 1.5 * rr * HEX_RADIUS);
 }
 
 function annularSegmentGeometry(innerRadius, outerRadius, span, depth) {
@@ -995,9 +996,6 @@ export class TabokTrue3DBoard {
       });
       // The group remains the invisible rules/selection anchor. The rendered
       // feet are fitted to the real tile surface; only the Major levitates.
-      visual.updateMatrixWorld(true);
-      const bounds = new THREE.Box3().setFromObject(visual);
-      if (Number.isFinite(bounds.min.y)) visual.position.y += (major ? .52 : .015) - bounds.min.y;
       visual.userData.setMode?.('idle');
       group.userData.visual3D = visual;
       group.add(visual);
@@ -1011,9 +1009,14 @@ export class TabokTrue3DBoard {
         visual.material.map.offset.set(0,0);
         visual.center.x=.47;
       }
-      visual.position.y = major ? .58 : .02;
+      visual.position.y = 0;
       group.add(visual);
     }
+    // Fit after attachment so Box3 includes the complete transformed hierarchy.
+    // Traveler and Minor feet kiss the tile; the Major keeps half its old hover.
+    group.updateMatrixWorld(true);
+    const bounds = new THREE.Box3().setFromObject(visual);
+    if (Number.isFinite(bounds.min.y)) visual.position.y += (major ? .26 : 0) - bounds.min.y;
     if (!group.userData.summoning && !group.userData.departing) group.position.copy(worldFor(actor.pos));
     group.userData.actorId = actor.id;
     group.userData.actorKey = `${actor.kind}|${actor.charId || ''}|${major ? 1 : 0}`;
@@ -1038,7 +1041,7 @@ export class TabokTrue3DBoard {
     const actor = this.actors.get(id);
     if (actor?.userData.departing || actor?.userData.cinematicLocks) { actor.userData.pendingRemoval = true; return; }
     if (actor) {
-      clearTimeout(actor.userData.actionTimer);actor.userData.actionResolve?.();
+      clearTimeout(actor.userData.actionTimer);clearTimeout(actor.userData.damageFlashTimer);actor.userData.actionResolve?.();
       this.actorRoot.remove(actor);
       disposeObject(actor);
       this.actors.delete(id);
@@ -1062,7 +1065,8 @@ export class TabokTrue3DBoard {
     if (group.userData.cinematicLocks) group.userData.cinematicSnapshotPos = actor.pos;
     if (!group.userData.summoning && !group.userData.departing && !group.userData.cinematicLocks) group.position.copy(worldFor(actor.pos));
     if (group.userData.visual3D && actor.pos !== 'PORTAL' && !group.userData.cinematicLocks) {
-      if (!group.userData.hasTravelHeading) group.userData.heading = Math.atan2(-group.position.x, -group.position.z);
+      const atEntrance=actor.kind==='player'&&actor.start&&actor.pos===actor.start;
+      if (atEntrance||!group.userData.hasTravelHeading) group.userData.heading = Math.atan2(-group.position.x, -group.position.z);
       group.userData.visual3D.rotation.y = group.userData.heading;
     }
 
@@ -1327,7 +1331,7 @@ export class TabokTrue3DBoard {
     if(actor.userData.major) movementMode='levitate';
     else if(actor.userData.actorKind==='player'){
       const key=[id,from,to,journeyLength,journeyStep].join('|'),seed=[...key].reduce((n,ch)=>(n*33+ch.charCodeAt(0))>>>0,17);
-      const quiet=['walk','slide','crouch','jump'],far=['run','run','acro'];
+      const quiet=['walk','walk','crouch','jump'],far=['run','run','acro'];
       const choices=journeyLength>=3?far:quiet;movementMode=choices[seed%choices.length];
     }
     visual?.userData.setMode?.(movementMode);
@@ -1343,16 +1347,25 @@ export class TabokTrue3DBoard {
     });
   }
 
-  showActorSpeech(id, text, duration = 2500) {
+  showActorSpeech(id, text, duration = 2500, className = '') {
     const actor=this.actors.get(id);if(!actor||!text)return;
-    const node=document.createElement('div');node.className='actor-speech-bubble';node.textContent=text;node.setAttribute('role','status');
-    document.body.append(node);const entry={id,node,expires:performance.now()+duration};this.actorSpeech.add(entry);this.positionActorSpeech(entry);
+    const node=document.createElement('div');node.className='actor-speech-bubble'+(className?' '+className:'');node.textContent=text;node.setAttribute('role','status');
+    document.body.append(node);const entry={id,node,height:className==='heart-loss'?1.62:1.35};this.actorSpeech.add(entry);this.positionActorSpeech(entry);
     setTimeout(()=>{node.classList.add('leaving');setTimeout(()=>{node.remove();this.actorSpeech.delete(entry)},220)},Math.max(500,duration-220));
   }
 
   positionActorSpeech(entry) {
-    const point=this.actorScreenPoint(entry.id,1.35);if(!point){entry.node.style.display='none';return}
+    const point=this.actorScreenPoint(entry.id,entry.height);if(!point){entry.node.style.display='none';return}
     entry.node.style.display='';entry.node.style.left=point.x+'px';entry.node.style.top=point.y+'px';
+  }
+
+  damageFeedback(id, hearts = 1) {
+    const actor=this.actors.get(id);if(!actor||hearts<1)return;
+    this.showActorSpeech(id,'−'+hearts+' '+(hearts===1?'♥':'♥♥'),'heart-loss',1650);
+    clearTimeout(actor.userData.damageFlashTimer);
+    if(!actor.userData.damageMaterials){actor.userData.damageMaterials=[];actor.traverse(node=>{if(!node.isMesh)return;for(const mat of(Array.isArray(node.material)?node.material:[node.material])){if(!mat?.emissive||actor.userData.damageMaterials.some(x=>x.mat===mat))continue;actor.userData.damageMaterials.push({mat,color:mat.emissive.clone(),intensity:mat.emissiveIntensity||0})}})}
+    actor.userData.damageMaterials.forEach(({mat})=>{mat.emissive.set(0xff183d);mat.emissiveIntensity=1.45});
+    actor.userData.damageFlashTimer=setTimeout(()=>actor.userData.damageMaterials?.forEach(({mat,color,intensity})=>{mat.emissive.copy(color);mat.emissiveIntensity=intensity}),720);
   }
 
   actorScreenPoint(id,height=.72) {

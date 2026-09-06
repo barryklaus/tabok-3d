@@ -119,14 +119,34 @@ test('Grounded Legends removes plinths, faces travel and shares character speech
  const actorFactory=board.match(/makeActor\(actor\) \{([\s\S]*?)\n  clearGroup\(/)?.[1]||'';
  const talks=cinematics.match(/const CROSSING_TALKS = \[([\s\S]*?)\];/)?.[1]||'';
  assert.ok(!actorFactory.includes('CylinderGeometry'),'actor factory must not create visible plinth cylinders');
- assert.match(board,/\(major \? \.52 : \.015\) - bounds\.min\.y/);
+ assert.match(board,/\(major \? \.26 : 0\) - bounds\.min\.y/);
+ assert.match(board,/const atEntrance=actor\.kind==='player'&&actor\.start&&actor\.pos===actor\.start/);
  assert.match(board,/targetHeading=Math\.atan2\(dx,dz\)/);
- assert.match(board,/const quiet=\['walk','slide','crouch','jump'\],far=\['run','run','acro'\]/);
- assert.match(travelers,/\['move','walk','run','slide','crouch','jump','acro'\]/);
+ assert.match(board,/const quiet=\['walk','walk','crouch','jump'\],far=\['run','run','acro'\]/);
+ assert.ok(!board.includes("'slide'"));
+ assert.match(travelers,/\['move','walk','run','crouch','jump','acro'\]/);
  assert.match(monsters,/mode==='move'\|\|mode==='walk'/);
  assert.match(monsters,/mode==='move'\|\|mode==='levitate'/);
  assert.equal([...talks.matchAll(/'([^']+)'/g)].length,50);
  assert.match(cinematics,/board\.showActorSpeech\?\./);
  assert.match(cinematics,/eventPhrase\(event,event\.type==='crossing'\?CROSSING_TALKS:REJECTION_TALKS\)/);
  assert.match(html,/journeyLength:route\.length/);
+});
+
+test('Correction pass adds heart feedback, Major reroll and delayed carried verdict',()=>{
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ const board=fs.readFileSync(path.join(root,'true3d-board.js'),'utf8');
+ const cinematics=fs.readFileSync(path.join(root,'portal-cinematics.js'),'utf8');
+ const css=fs.readFileSync(path.join(root,'portal-events.css'),'utf8');
+ assert.match(board,/return new THREE\.Vector3\([^;]+, \.11,/);
+ assert.match(board,/damageFeedback\(id, hearts = 1\)/);
+ assert.match(html,/webglBoard\?\.damageFeedback\?\.\(p\.p,left\)/);
+ assert.match(html,/MAJOR_MODE=\[[^\]]+'EXTRA TURN'\]/);
+ assert.match(html,/monsterTurns\.push\(m\)/);
+ assert.match(html,/rolls all three dice again/);
+ assert.match(html,/function portalVerdict\(p,traveler,matches\)/);
+ assert.match(html,/cardHTML\(q\.cards,false\)\+'<div class="result">[^<]+<\/div>'\+portalVerdict/);
+ assert.match(css,/\.portal-verdict\.match/);
+ assert.match(css,/\.actor-speech-bubble\.heart-loss/);
+ assert.match(cinematics,/event\.type==='crossing'\?4200:3950/);
 });

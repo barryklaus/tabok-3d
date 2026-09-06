@@ -85,7 +85,7 @@ export class PortalCinematics {
     this.label.classList.add('visible');
     board.portalState = event.type === 'crossing' ? 'crossing' : event.type === 'rejection' ? 'rejected' : event.type === 'fireball' ? 'rejected' : 'reckoning';
     visual?.userData.setMode?.(event.type === 'crossing' ? 'victory' : event.type === 'rejection' ? 'blast' : event.type === 'fireball' ? 'rune' : 'summon');
-    if(event.type==='crossing'||event.type==='rejection')board.showActorSpeech?.(event.actor.id,eventPhrase(event,event.type==='crossing'?CROSSING_TALKS:REJECTION_TALKS),event.type==='crossing'?2700:2450);
+    if(event.type==='crossing'||event.type==='rejection')board.showActorSpeech?.(event.actor.id,eventPhrase(event,event.type==='crossing'?CROSSING_TALKS:REJECTION_TALKS),event.type==='crossing'?4200:3950);
     const face=(point)=>{if(!visual)return;const dx=point.x-actor.position.x,dz=point.z-actor.position.z;visual.rotation.y=Math.atan2(dx,dz);actor.userData.heading=visual.rotation.y;actor.userData.hasTravelHeading=true;};
     if(event.type==='crossing')face(ORIGIN);else if(event.type==='rejection'||event.type==='major'||event.type==='minor')face(task.end);else if(event.type==='pounce')face(ORIGIN);
     if (event.type === 'major' || event.type === 'minor') {
@@ -246,6 +246,7 @@ export class PortalCinematics {
     delete actor.userData.cinematicSnapshotPos;
     actor.userData.cinematicLocks = Math.max(0,(actor.userData.cinematicLocks||1)-1);
     actor.userData.visual3D?.userData.setMode?.('idle');
+    if(event.type==='rejection'&&actor.userData.visual3D){const dx=-actor.position.x,dz=-actor.position.z;actor.userData.heading=Math.atan2(dx,dz);actor.userData.hasTravelHeading=false;actor.userData.visual3D.rotation.y=actor.userData.heading;}
     const departing = event.type === 'crossing' || event.type === 'death';
     actor.visible = !departing; task.hiddenBase?.forEach(child=>child.visible=true);
     const glow = this.board.occupancyGlows.get(event.actor.id); if (glow) glow.visible=!departing;
