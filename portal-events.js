@@ -12,11 +12,12 @@ function portalActorDescriptor(actor) {
 }
 
 function receivePortalVisual(event) {
-  if (!['major','minor','crossing','rejection','death'].includes(event?.type) || typeof event.id!=='string') return Promise.resolve();
+  if (!['major','minor','crossing','rejection','death','pounce','fireball'].includes(event?.type) || typeof event.id!=='string') return Promise.resolve();
   const actor=event.actor;
   if (!actor || !/^(P[1-6]|M[1-3]|MAJOR)$/.test(actor.id) || !['player','monster'].includes(actor.kind)) return Promise.resolve();
   const validPosition=pos=>pos==='PORTAL'||(typeof pos==='string'&&/^-?\d{1,2},\d{1,2}$/.test(pos));
   if(!validPosition(actor.pos)||(event.destination&&!validPosition(event.destination)))return Promise.resolve();
+  if(event.paths&&(!Array.isArray(event.paths)||event.paths.length>3||event.paths.some(path=>!Array.isArray(path)||path.length>30||path.some(pos=>!validPosition(pos)))))return Promise.resolve();
   const generation=portalVisualGeneration;
   const ready=webglBoard?.ready || (async()=>{
     const started=performance.now();
@@ -29,8 +30,10 @@ function receivePortalVisual(event) {
   return Promise.resolve(promise).catch(error=>console.warn('TABOK portal event recovered:',error));
 }
 
-function emitPortalVisual(type, actor, destination) {
+function emitPortalVisual(type, actor, destination, details={}) {
   const event={id:portalVisualSession+'-'+(++portalVisualSequence),type,actor:portalActorDescriptor(actor),destination,speed:game?.speed||'cinematic'};
+  if(details.paths)event.paths=details.paths;
+  if(Number.isFinite(details.rage))event.rage=Math.max(0,Math.min(4,details.rage));
   window.TabokBroadcastVisual?.(event);
   const pending=receivePortalVisual(event);
   portalVisualPending.add(pending);pending.finally(()=>portalVisualPending.delete(pending));

@@ -41,6 +41,16 @@ test('invalid network events cannot create actors',async()=>{
  assert.equal(calls.length,0);
 });
 
+test('pounce and fireball visual events validate bounded board paths',async()=>{
+ const {c,calls}=context();
+ const pounce={...event,id:'host-pounce',type:'pounce',actor:{id:'M1',kind:'monster',pos:'2,2',name:'M1'},destination:'4,3'};
+ const fireball={...event,id:'host-fireball',type:'fireball',actor:{id:'MAJOR',kind:'monster',pos:'5,5',major:true,name:'The Sovereign'},destination:'5,5',paths:[['5,5','6,5','7,5']],rage:2};
+ await c.receivePortalVisual(pounce);await c.receivePortalVisual(fireball);
+ assert.equal(calls.length,2);
+ await c.receivePortalVisual({...fireball,id:'bad-path',paths:[['5,5','outside']]});
+ assert.equal(calls.length,2);
+});
+
 test('a state snapshot during renderer startup does not drop a visual event',async()=>{
  let ready;const received=[];const {c}=context({isTrue3D:true,ready:new Promise(r=>ready=r),playPortalEvent:e=>{received.push(e);return Promise.resolve()}});
  const pending=c.receivePortalVisual(event);c.game={round:2};ready();await pending;
@@ -69,4 +79,16 @@ test('rejected or crossed actors are emitted before their rule-state changes',()
  assert.match(html,/function reject\(p\)\{emitPortalVisual\('rejection',p,p.start\);p.pos=p.start/);
  assert.match(html,/function kill\(p,events\)\{emitPortalVisual\('death',p,p.pos\);p.status='dead'/);
  assert.ok(!html.includes('webglBoard?.portalExit'));
+});
+
+test('Rift Hunt rules use four Hearts, x2 Minors, fourth-rejection Major and bounded Rage',()=>{
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ assert.match(html,/inventory:\[0,0,0\],life:4,/);
+ assert.match(html,/monster=\{id:'M'\+n,pos:open,moveMultiplier:2/);
+ assert.match(html,/else if\(n===4\).*summonMajorMonster/);
+ assert.match(html,/monster\.rage=Math\.min\(4,n-4\)/);
+ assert.match(html,/MINOR_ACTION=\['ATTACK','ATTACK','ATTACK','POUNCE','POUNCE','POUNCE'\]/);
+ assert.match(html,/applyDamage\(traveler,2,m\.id\+' direct Rift Pounce'/);
+ assert.match(html,/applyDamage\(impact\.target,2,'Major Fireball '/);
+ assert.ok(!html.includes('Color Attack'));
 });

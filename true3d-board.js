@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createTravelerPilot } from './character-3d-travelers.js?v=20260906S1';
 import { createMonsterPilot } from './monster-3d-models.js?v=20260906S1';
-import { PortalCinematics } from './portal-cinematics.js?v=20260906P1';
+import { PortalCinematics } from './portal-cinematics.js?v=20260906G1';
 
 const SQRT3 = Math.sqrt(3);
 const HEX_RADIUS = .72;

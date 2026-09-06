@@ -1,6 +1,25 @@
 # TABOK — True 3D Board Alpha
 
-Version: **v0.50.0 — Portal Rituals · 2026.09.06.P1**
+Version: **v0.51.0 — Rift Hunt · 2026.09.06.G1**
+
+## Rift Hunt gameplay rework
+
+- Every Traveler now begins with 4 Hearts.
+- M1, M2, and M3 arrive on Rejections 1–3 with permanent ×2 movement.
+- The Minor Monster Action die is split between Attack and Rift Pounce. Attack
+  strikes adjacent Travelers. Pounce marks a random legal hex, dives through the
+  Portal, deals 2 damage on the landing hex and 1 damage around it, and scatters
+  any Armor, Shield, or Rune Dice caught at the impact point.
+- Rejection 4 summons the Major Monster. Later rejections add Major Rage: one,
+  two, then three Fireball lanes, followed by an additional Portal lightning surge.
+- Fireballs travel in unique hex directions and deal 2 damage to the first
+  Traveler hit. A Shield reflects the full Fireball and breaks.
+- Armor is permanent and reduces each incoming hit by 1, to a minimum of 1;
+  it no longer changes maximum Health.
+- Pounce and Fireball are explicit host-authored visual events, so the target,
+  paths, timing, and 3D presentation are identical on every connected device.
+
+Regression checks: `node --test tests/portal-events.test.cjs`.
 
 ## Portal Rituals
 

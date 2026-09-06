@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 const clamp = value => Math.max(0, Math.min(1, value));
 const smooth = value => { const t = clamp(value); return t * t * (3 - 2 * t); };
-const DURATIONS = { major: 6800, minor: 2800, crossing: 3400, rejection: 2900, death: 5200 };
+const DURATIONS = { major: 6800, minor: 2800, crossing: 3400, rejection: 2900, death: 5200, pounce: 2400, fireball: 1700 };
 const ORIGIN = new THREE.Vector3(0, .42, 0);
 
 // One board-owned timeline: state snapshots cannot snap or delete an actor midway
@@ -59,24 +59,36 @@ export class PortalCinematics {
     const visual = actor.userData.visual3D;
     clearTimeout(actor.userData.actionTimer);actor.userData.actionResolve?.();actor.userData.actionResolve=null;
     // The plinth stays on the ground: only the figure travels through the air.
-    task.hiddenBase = actor.children.filter(child => child !== visual && child.visible);
+    task.hiddenBase = event.type === 'fireball' ? [] : actor.children.filter(child => child !== visual && child.visible);
     task.hiddenBase.forEach(child => child.visible = false);
     const glow = board.occupancyGlows.get(event.actor.id); if (glow) glow.visible = false;
     this.label.dataset.kind = event.type;
     const name = String(event.actor.name || event.actor.id).slice(0, 64);
     this.label.replaceChildren();
     const kicker = document.createElement('small'), title = document.createElement('strong');
-    kicker.textContent = {major:'THE SEAL IS BROKEN',minor:'SOMETHING ANSWERED',crossing:'THE WAY OPENS',rejection:'THE VEIL REFUSES',death:'CLAIMED BY THE RUINS'}[event.type];
-    title.textContent = {major:'The Sovereign rises',minor:'A ruin beast emerges',crossing:name + ' crosses',rejection:name + ' is rejected',death:name + ' has fallen'}[event.type];
+    kicker.textContent = {major:'THE SEAL IS BROKEN',minor:'SOMETHING ANSWERED',crossing:'THE WAY OPENS',rejection:'THE VEIL REFUSES',death:'CLAIMED BY THE RUINS',pounce:'RIFT POUNCE',fireball:'MAJOR RAGE'}[event.type];
+    title.textContent = {major:'The Sovereign rises',minor:'A ruin beast emerges',crossing:name + ' crosses',rejection:name + ' is rejected',death:name + ' has fallen',pounce:name+' tears through the Rift',fireball:'The Sovereign casts Fireball'}[event.type];
     this.label.append(kicker, title);
     this.label.classList.add('visible');
-    board.portalState = event.type === 'crossing' ? 'crossing' : event.type === 'rejection' ? 'rejected' : 'reckoning';
-    visual?.userData.setMode?.(event.type === 'crossing' ? 'victory' : event.type === 'rejection' ? 'receive' : 'summon');
+    board.portalState = event.type === 'crossing' ? 'crossing' : event.type === 'rejection' ? 'rejected' : event.type === 'fireball' ? 'rejected' : 'reckoning';
+    visual?.userData.setMode?.(event.type === 'crossing' ? 'victory' : event.type === 'rejection' ? 'receive' : event.type === 'fireball' ? 'rune' : 'summon');
     if (event.type === 'major' || event.type === 'minor') {
       actor.position.copy(ORIGIN); actor.position.y = -.9; actor.scale.setScalar(.02);
       board.summonCinematic = {major:event.type === 'major', started:task.started, duration:task.duration};
     }
     if (event.type === 'death') this.breakApart(task);
+    if(event.type==='pounce'){
+      const material=new THREE.MeshBasicMaterial({color:0xff78e8,transparent:true,opacity:.7,depthWrite:false,side:THREE.DoubleSide});
+      task.telegraph=new THREE.Mesh(new THREE.RingGeometry(.55,.72,6),material);task.telegraph.rotation.x=-Math.PI/2;task.telegraph.position.copy(task.end);task.telegraph.position.y=.11;board.effectRoot.add(task.telegraph);
+    }
+    if(event.type==='fireball'){
+      task.paths=(event.paths||[]).map(path=>path.map(pos=>this.worldFor(pos)));
+      task.projectiles=task.paths.map(()=>{
+        const material=new THREE.MeshBasicMaterial({color:0xff7a28,transparent:true,opacity:.95,depthWrite:false});
+        const orb=new THREE.Mesh(new THREE.IcosahedronGeometry(.24,1),material);orb.visible=false;board.effectRoot.add(orb);return orb;
+      });
+      if(Number(event.rage)>=4&&!this.reduced)board.lightningStrike(ORIGIN,1.25);
+    }
     task.deadline = setTimeout(() => this.finish(task), task.duration + 100);
     this.update(performance.now());
   }
@@ -103,9 +115,9 @@ export class PortalCinematics {
     this.positionLabels();
     const task = this.active; if (!task) return;
     const {event,actor} = task, board = this.board, u = clamp((now - task.started) / task.duration);
-    if(event.type!=='death')board.portalState=event.type==='crossing'?'crossing':event.type==='rejection'?'rejected':'reckoning';
+    if(event.type!=='death')board.portalState=event.type==='crossing'?'crossing':event.type==='rejection'||event.type==='fireball'?'rejected':'reckoning';
     const open = smooth(u / .22) * (1 - smooth((u - .79) / .21));
-    if (event.type !== 'death') this.openSphere(open);
+    if (event.type !== 'death' && event.type !== 'fireball') this.openSphere(open);
     const visual = actor.userData.visual3D;
     if(task.camera&&!task.camera.cancelled){
       const weight=smooth(u/.22)*(1-smooth((u-.8)/.2)),c=task.camera;
@@ -140,6 +152,22 @@ export class PortalCinematics {
         board.summonCinematic = {major:false,started:performance.now(),duration:380};
       });
       board.portalDomeMaterial.uniforms.uPower.value += charge * (1-flight) * 1.5;
+    } else if(event.type==='pounce'){
+      const enter=smooth(u/.38),exit=smooth((u-.46)/.5);
+      actor.position.lerpVectors(task.start,ORIGIN,enter);
+      if(u>=.46)actor.position.lerpVectors(ORIGIN,task.end,exit);
+      actor.position.y+=Math.sin((u<.46?enter:exit)*Math.PI)*(this.reduced?.18:1.15);
+      actor.rotation.y=task.rotation.y+u*Math.PI*2;
+      if(task.telegraph){task.telegraph.material.opacity=.35+.45*Math.sin(u*Math.PI*8)**2;task.telegraph.scale.setScalar(.85+u*.25);}
+      this.impulse(task,'rift-in',.32,u,()=>board.createSkyBeam(ORIGIN,0xe27aff,450,.55));
+      this.impulse(task,'rift-out',.62,u,()=>board.createSkyBeam(task.end,0xff78e8,550,.7));
+    } else if(event.type==='fireball'){
+      (task.projectiles||[]).forEach((orb,index)=>{
+        const path=task.paths[index]||[],travel=smooth((u-.16)/.67);
+        orb.visible=travel>0&&u<.91&&path.length>1;
+        if(path.length>1){const scaled=travel*(path.length-1),segment=Math.min(path.length-2,Math.floor(scaled)),part=scaled-segment;orb.position.lerpVectors(path[segment],path[segment+1],part);orb.position.y=.55+Math.sin(travel*Math.PI)*.42;orb.scale.setScalar(.8+.35*Math.sin(u*Math.PI*14)**2);}
+      });
+      this.impulse(task,'fire',.15,u,()=>board.createSkyBeam(task.start,0xff762e,350,.45));
     } else if (event.type === 'death') this.updateFragments(task, u * DURATIONS.death / 1000);
     this.label.style.opacity = String(Math.min(1,u*10,(1-u)*8));
     if (u >= 1) this.finish(task);
@@ -194,6 +222,8 @@ export class PortalCinematics {
       const remains = new THREE.Group(); (task.fragments||[]).forEach(item=>remains.add(item.part));
       this.disposeObject(remains);
     }
+    if(task.telegraph){task.telegraph.removeFromParent();this.disposeObject(task.telegraph);task.telegraph=null;}
+    for(const projectile of task.projectiles||[]){projectile.removeFromParent();this.disposeObject(projectile);}
     actor.position.copy(task.end); actor.rotation.copy(task.rotation); actor.scale.copy(task.scale);
     if(actor.userData.cinematicSnapshotPos)actor.position.copy(this.worldFor(actor.userData.cinematicSnapshotPos));
     delete actor.userData.cinematicSnapshotPos;
