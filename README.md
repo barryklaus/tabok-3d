@@ -1,6 +1,21 @@
 # TABOK — True 3D Board Alpha
 
-Version: **v0.52.0 — Living Diorama · 2026.09.07.G2**
+Version: **v0.53.0 — Grounded Legends · 2026.09.07.G3**
+
+## Grounded Legends movement pass
+
+- The visible actor plinths are gone. Invisible actor anchors preserve board
+  selection and rules while Traveler and Minor Monster feet are fitted directly
+  to the real 3D tile surface. Only the Major Monster remains airborne.
+- Every moving actor turns toward its destination. Minor Monsters use a grounded
+  quadruped walk; the Major keeps a folded-leg levitation pose while traveling.
+- Travelers choose among walking, sliding, crouched traversal and jumping for
+  shorter routes. Routes of three or more hexes shift to running and occasional
+  acrobatic flips, without changing route legality or timing.
+- Successful crossings display one of 50 deterministic randomized victory
+  quips. Rejections display a separate pool of despair reactions. These actor-
+  anchored speech bubbles are generated from the shared visual event, so every
+  connected device sees the same line at the same moment.
 
 ## Living Diorama animation pass
 

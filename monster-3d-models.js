@@ -1,4 +1,4 @@
-import { sculptMinor, sculptMajor } from './sculpted-monsters.js?v=20260907G2';
+import { sculptMinor, sculptMajor } from './sculpted-monsters.js?v=20260907G3';
 export const createMinorMonster = sculptMinor;
 export const createMajorMonster = sculptMajor;
 export const MONSTER_3D = {

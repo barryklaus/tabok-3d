@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { createTravelerPilot } from './character-3d-travelers.js?v=20260907G2';
-import { createMonsterPilot } from './monster-3d-models.js?v=20260907G2';
-import { PortalCinematics } from './portal-cinematics.js?v=20260907G2';
+import { createTravelerPilot } from './character-3d-travelers.js?v=20260907G3';
+import { createMonsterPilot } from './monster-3d-models.js?v=20260907G3';
+import { PortalCinematics } from './portal-cinematics.js?v=20260907G3';
 
 const SQRT3 = Math.sqrt(3);
 const HEX_RADIUS = .72;
@@ -319,6 +319,7 @@ export class TabokTrue3DBoard {
     this.pickables = [];
     this.actors = new Map();
     this.occupancyGlows = new Map();
+    this.actorSpeech = new Set();
     this.itemRoot = new THREE.Group();
     this.actorRoot = new THREE.Group();
     this.occupancyRoot = new THREE.Group();
@@ -977,50 +978,13 @@ export class TabokTrue3DBoard {
   makeActor(actor) {
     const group = new THREE.Group();
     const major = actor.major;
-    const color = new THREE.Color(actor.color || (major ? '#d842db' : '#ef4f9c'));
-    const radius = major ? .68 : .5;
-    const base = new THREE.Mesh(
-      new THREE.CylinderGeometry(radius * .96, radius, .15, 6),
-      new THREE.MeshStandardMaterial({
-        map: this.textures.wall, bumpMap: this.stoneHeightTexture, bumpScale: .07,
-        color: major ? 0x332333 : 0x4a4039, roughness: .86, metalness: .12
-      })
-    );
-    base.position.y = .12;
-    // CylinderGeometry is point-top by default, matching the original board.
-    base.rotation.y = 0;
-    base.castShadow = base.receiveShadow = true;
-    group.add(base);
-    const inset = new THREE.Mesh(
-      new THREE.CylinderGeometry(radius * .79, radius * .82, .035, 6),
-      new THREE.MeshStandardMaterial({
-        color: 0x171319, emissive: color,
-        emissiveIntensity: actor.active ? .2 : .085, roughness: .62, metalness: .34
-      })
-    );
-    inset.position.y = .205;
-    inset.rotation.y = 0;
-    inset.castShadow = inset.receiveShadow = true;
-    group.add(inset);
-    const trimGeometry = new THREE.RingGeometry(radius * .81, radius * .91, 6);
-    trimGeometry.rotateX(-Math.PI / 2);
-    const trim = new THREE.Mesh(
-      trimGeometry,
-      new THREE.MeshStandardMaterial({
-        color, emissive: color, emissiveIntensity: actor.active ? .28 : .13,
-        roughness: .42, metalness: .72, side: THREE.DoubleSide
-      })
-    );
-    trim.rotation.y = Math.PI / 6;
-    trim.position.y = .228;
-    group.add(trim);
     let visual;
     try {
       visual = actor.kind === 'player' ? createTravelerPilot(actor.charId || 'misty') : createMonsterPilot(major ? 'major' : 'minor');
       // Keep silhouettes readable without letting them spill beyond their board hex.
       const scale = actor.kind === 'player' ? (actor.charId === 'justin' ? .33 : .36) : major ? .36 : .47;
       visual.scale.setScalar(scale);
-      visual.position.y = .23;
+      visual.position.y = 0;
       visual.traverse(node => {
         if (node.userData.galleryPlatform) node.visible = false;
         if (!node.isMesh) return;
@@ -1029,6 +993,11 @@ export class TabokTrue3DBoard {
         node.castShadow = this.quality === 'auto';
         node.receiveShadow = false;
       });
+      // The group remains the invisible rules/selection anchor. The rendered
+      // feet are fitted to the real tile surface; only the Major levitates.
+      visual.updateMatrixWorld(true);
+      const bounds = new THREE.Box3().setFromObject(visual);
+      if (Number.isFinite(bounds.min.y)) visual.position.y += (major ? .52 : .015) - bounds.min.y;
       visual.userData.setMode?.('idle');
       group.userData.visual3D = visual;
       group.add(visual);
@@ -1042,14 +1011,15 @@ export class TabokTrue3DBoard {
         visual.material.map.offset.set(0,0);
         visual.center.x=.47;
       }
-      visual.position.y = major ? .15 : .2;
+      visual.position.y = major ? .58 : .02;
       group.add(visual);
     }
     if (!group.userData.summoning && !group.userData.departing) group.position.copy(worldFor(actor.pos));
     group.userData.actorId = actor.id;
     group.userData.actorKey = `${actor.kind}|${actor.charId || ''}|${major ? 1 : 0}`;
-    group.userData.insetMaterial = inset.material;
-    group.userData.trimMaterial = trim.material;
+    group.userData.actorKind = actor.kind;
+    group.userData.major = !!major;
+    group.userData.heading = visual?.rotation.y || 0;
     this.actorRoot.add(group);
     this.actors.set(actor.id, group);
     // Summons are explicit events, never a side effect of receiving a snapshot.
@@ -1092,10 +1062,9 @@ export class TabokTrue3DBoard {
     if (group.userData.cinematicLocks) group.userData.cinematicSnapshotPos = actor.pos;
     if (!group.userData.summoning && !group.userData.departing && !group.userData.cinematicLocks) group.position.copy(worldFor(actor.pos));
     if (group.userData.visual3D && actor.pos !== 'PORTAL' && !group.userData.cinematicLocks) {
-      group.userData.visual3D.rotation.y = Math.atan2(-group.position.x, -group.position.z);
+      if (!group.userData.hasTravelHeading) group.userData.heading = Math.atan2(-group.position.x, -group.position.z);
+      group.userData.visual3D.rotation.y = group.userData.heading;
     }
-    if (group.userData.insetMaterial) group.userData.insetMaterial.emissiveIntensity = actor.active ? .2 : .085;
-    if (group.userData.trimMaterial) group.userData.trimMaterial.emissiveIntensity = actor.active ? .28 : .13;
 
     const glowKey = `${actor.kind}|${actor.major ? 1 : 0}|${actor.color || ''}`;
     let glow = this.occupancyGlows.get(actor.id);
@@ -1345,20 +1314,45 @@ export class TabokTrue3DBoard {
   }
 
 
-  animateActor(id, from, to, duration = 320) {
+  animateActor(id, from, to, duration = 320, traversal = {}) {
     const actor = this.actors.get(id);
     if (!actor) return Promise.resolve();
-    const start = worldFor(from), end = worldFor(to), started = performance.now();
-    actor.userData.visual3D?.userData.setMode?.('move');
+    const start = worldFor(from), end = worldFor(to), started = performance.now(), visual = actor.userData.visual3D;
+    const dx=end.x-start.x,dz=end.z-start.z,targetHeading=Math.atan2(dx,dz);
+    const priorHeading=Number.isFinite(actor.userData.heading)?actor.userData.heading:targetHeading;
+    const headingDelta=Math.atan2(Math.sin(targetHeading-priorHeading),Math.cos(targetHeading-priorHeading));
+    actor.userData.heading=targetHeading;actor.userData.hasTravelHeading=true;
+    const journeyLength=Math.max(1,Number(traversal.journeyLength)||1),journeyStep=Math.max(0,Number(traversal.journeyStep)||0);
+    let movementMode='walk';
+    if(actor.userData.major) movementMode='levitate';
+    else if(actor.userData.actorKind==='player'){
+      const key=[id,from,to,journeyLength,journeyStep].join('|'),seed=[...key].reduce((n,ch)=>(n*33+ch.charCodeAt(0))>>>0,17);
+      const quiet=['walk','slide','crouch','jump'],far=['run','run','acro'];
+      const choices=journeyLength>=3?far:quiet;movementMode=choices[seed%choices.length];
+    }
+    visual?.userData.setMode?.(movementMode);
     return new Promise(resolve => {
       const step = now => {
         const t = Math.min(1, (now - started) / duration);
         const eased = t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        if(visual)visual.rotation.y=priorHeading+headingDelta*Math.min(1,t/.18);
         actor.position.lerpVectors(start, end, eased);
-        if (t < 1) requestAnimationFrame(step); else { actor.position.copy(end);actor.userData.visual3D?.userData.setMode?.('idle');resolve(); }
+        if (t < 1) requestAnimationFrame(step); else { actor.position.copy(end);if(visual)visual.rotation.y=targetHeading;visual?.userData.setMode?.('idle');resolve(); }
       };
       requestAnimationFrame(step);
     });
+  }
+
+  showActorSpeech(id, text, duration = 2500) {
+    const actor=this.actors.get(id);if(!actor||!text)return;
+    const node=document.createElement('div');node.className='actor-speech-bubble';node.textContent=text;node.setAttribute('role','status');
+    document.body.append(node);const entry={id,node,expires:performance.now()+duration};this.actorSpeech.add(entry);this.positionActorSpeech(entry);
+    setTimeout(()=>{node.classList.add('leaving');setTimeout(()=>{node.remove();this.actorSpeech.delete(entry)},220)},Math.max(500,duration-220));
+  }
+
+  positionActorSpeech(entry) {
+    const point=this.actorScreenPoint(entry.id,1.35);if(!point){entry.node.style.display='none';return}
+    entry.node.style.display='';entry.node.style.left=point.x+'px';entry.node.style.top=point.y+'px';
   }
 
   actorScreenPoint(id,height=.72) {
@@ -1391,6 +1385,7 @@ export class TabokTrue3DBoard {
       this.faultlineMaterial.uniforms.uMajor.value += (target - this.faultlineMaterial.uniforms.uMajor.value) * .035;
     }
     this.controls.update();
+    this.actorSpeech.forEach(entry=>this.positionActorSpeech(entry));
     const cinematic=this.summonCinematic,cinematicAge=cinematic?(now-cinematic.started):Infinity,cinematicLive=cinematicAge<cinematic?.duration;
     const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
     const majorStorm=cinematicLive&&cinematic.major&&!reducedMotion;

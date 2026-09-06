@@ -109,3 +109,24 @@ test('Living Diorama stages idles, portal cards, Pounce concealment and rejectio
  assert.match(html,/Math\.pow\(progress,3\.8\)\*330/);
  assert.match(html,/p\.name\+' finds a path'/);
 });
+
+test('Grounded Legends removes plinths, faces travel and shares character speech',()=>{
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ const board=fs.readFileSync(path.join(root,'true3d-board.js'),'utf8');
+ const travelers=fs.readFileSync(path.join(root,'sculpted-travelers.js'),'utf8');
+ const monsters=fs.readFileSync(path.join(root,'sculpted-monsters.js'),'utf8');
+ const cinematics=fs.readFileSync(path.join(root,'portal-cinematics.js'),'utf8');
+ const actorFactory=board.match(/makeActor\(actor\) \{([\s\S]*?)\n  clearGroup\(/)?.[1]||'';
+ const talks=cinematics.match(/const CROSSING_TALKS = \[([\s\S]*?)\];/)?.[1]||'';
+ assert.ok(!actorFactory.includes('CylinderGeometry'),'actor factory must not create visible plinth cylinders');
+ assert.match(board,/\(major \? \.52 : \.015\) - bounds\.min\.y/);
+ assert.match(board,/targetHeading=Math\.atan2\(dx,dz\)/);
+ assert.match(board,/const quiet=\['walk','slide','crouch','jump'\],far=\['run','run','acro'\]/);
+ assert.match(travelers,/\['move','walk','run','slide','crouch','jump','acro'\]/);
+ assert.match(monsters,/mode==='move'\|\|mode==='walk'/);
+ assert.match(monsters,/mode==='move'\|\|mode==='levitate'/);
+ assert.equal([...talks.matchAll(/'([^']+)'/g)].length,50);
+ assert.match(cinematics,/board\.showActorSpeech\?\./);
+ assert.match(cinematics,/eventPhrase\(event,event\.type==='crossing'\?CROSSING_TALKS:REJECTION_TALKS\)/);
+ assert.match(html,/journeyLength:route\.length/);
+});

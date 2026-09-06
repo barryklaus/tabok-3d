@@ -4,6 +4,19 @@ const clamp = value => Math.max(0, Math.min(1, value));
 const smooth = value => { const t = clamp(value); return t * t * (3 - 2 * t); };
 const DURATIONS = { major: 6800, minor: 2800, crossing: 3400, rejection: 2900, death: 5200, pounce: 2400, fireball: 1700 };
 const ORIGIN = new THREE.Vector3(0, .42, 0);
+const CROSSING_TALKS = [
+  'Bye, suckers!','Try not to miss me.','The Portal likes me better.','Catch up, slowpokes!','I call this winning.','Enjoy the ruins!','Save me a seat—eventually.','Too stylish to stay trapped.','See you on the better side.','That is how legends leave.',
+  'Tell the monsters I said hello.','Was that supposed to be difficult?','The exit is lovely from here.','I would wait, but I won’t.','Last one out feeds the monster.','My treasure, my ticket.','Portal: conquered.','I make escaping look good.','Do send a postcard.','The Crossing chose wisely.',
+  'One less rival on the board.','Keep rolling; you may get lucky.','I’m off to brag about this.','The ruins could not hold me.','No refunds on my victory.','You can have my dust.','Mind the gap behind me.','This is my dramatic exit.','The Portal has excellent taste.','Victory suits me.',
+  'I came, I rolled, I crossed.','Good luck with the giant monster.','Race you to freedom—oh, wait.','The other side has snacks.','I leave you my deepest sympathy.','Consider this a masterclass.','The prophecy mentioned me, obviously.','Keep my hex warm.','Escaped with impeccable timing.','I regret absolutely nothing.',
+  'Wave when you finally cross.','The Portal and I are best friends now.','My work here is gloriously done.','Please applaud in an orderly fashion.','That breeze is called victory.','I have transcended your turn order.','Who needs luck when you have talent?','Another flawless getaway.','Tell Taliwala I won.','See you after the credits!'
+];
+const REJECTION_TALKS = [
+  'No, no, no—wrong way!','The Portal hates me.','I was so close!','Why does fate mock me?','Not the starting hex again!','My dignity stayed in the Portal.','I demand a recount.','That landing was intentional.','Everything hurts, including my pride.','I have made a terrible calculation.',
+  'The veil has no manners.','Can somebody catch me?','I regret touching the glowing vortex.','This is not how heroes travel.','I saw victory for half a second.','The Portal owes me an apology.','Please pretend you did not see that.','Back to the ruins. Wonderful.','I blame the dice.','My treasure combination betrayed me.',
+  'That could have gone better.','The universe said absolutely not.','I left my confidence in the void.','Why am I flying backward?','Next time, I am knocking first.','The Portal has chosen violence.','I need a moment—and new bones.','So much for the dramatic exit.','I have been cosmically rejected.','Fine. I will try again.'
+];
+const eventPhrase = (event,list) => list[[...(event.id||event.actor?.id||'TABOK')].reduce((n,ch)=>(n*31+ch.charCodeAt(0))>>>0,7)%list.length];
 
 // One board-owned timeline: state snapshots cannot snap or delete an actor midway
 // through an event. Deadlines also release the game when a browser suspends rAF.
@@ -72,6 +85,9 @@ export class PortalCinematics {
     this.label.classList.add('visible');
     board.portalState = event.type === 'crossing' ? 'crossing' : event.type === 'rejection' ? 'rejected' : event.type === 'fireball' ? 'rejected' : 'reckoning';
     visual?.userData.setMode?.(event.type === 'crossing' ? 'victory' : event.type === 'rejection' ? 'blast' : event.type === 'fireball' ? 'rune' : 'summon');
+    if(event.type==='crossing'||event.type==='rejection')board.showActorSpeech?.(event.actor.id,eventPhrase(event,event.type==='crossing'?CROSSING_TALKS:REJECTION_TALKS),event.type==='crossing'?2700:2450);
+    const face=(point)=>{if(!visual)return;const dx=point.x-actor.position.x,dz=point.z-actor.position.z;visual.rotation.y=Math.atan2(dx,dz);actor.userData.heading=visual.rotation.y;actor.userData.hasTravelHeading=true;};
+    if(event.type==='crossing')face(ORIGIN);else if(event.type==='rejection'||event.type==='major'||event.type==='minor')face(task.end);else if(event.type==='pounce')face(ORIGIN);
     if (event.type === 'major' || event.type === 'minor') {
       actor.position.copy(ORIGIN); actor.position.y = -.9; actor.scale.setScalar(.02);
       board.summonCinematic = {major:event.type === 'major', started:task.started, duration:task.duration};
@@ -130,7 +146,7 @@ export class PortalCinematics {
       actor.position.lerpVectors(ORIGIN, task.end, flight);
       actor.position.y = flight > 0 ? THREE.MathUtils.lerp(major ? 2.1 : 1.1, task.end.y, flight) + Math.sin(flight * Math.PI) * (major ? .7 : 1.65) : -.9 + rise * (major ? 3 : 2);
       actor.scale.setScalar(.02 + rise * .98);
-      actor.rotation.y = major ? Math.sin(rise * Math.PI) * .26 : flight * Math.PI * 2;
+      if(visual){const dx=task.end.x-actor.position.x,dz=task.end.z-actor.position.z;visual.rotation.y=Math.atan2(dx,dz)+(major?Math.sin(rise*Math.PI)*.08:0);actor.userData.heading=visual.rotation.y;}
       if (major) {
         [.15,.3,.49].forEach((at,index) => this.impulse(task,'bolt'+index,at,u,()=>board.lightningStrike(index===2?ORIGIN:new THREE.Vector3(index?2.6:-2.8,0,index?-2:2),index===2?1.2:.65)));
       } else this.impulse(task,'spit',.27,u,()=>board.createSkyBeam(ORIGIN,0xe27aff,950,.9));
@@ -158,7 +174,7 @@ export class PortalCinematics {
       actor.visible=u<.36||u>=.58;
       if(u>=.58){actor.position.copy(task.end);actor.position.y+=THREE.MathUtils.lerp(this.reduced?.35:2.5,0,exit)+Math.sin(exit*Math.PI)*(this.reduced?.08:.34);}
       else actor.position.y+=Math.sin(enter*Math.PI)*(this.reduced?.18:1.15);
-      actor.rotation.y=task.rotation.y+u*Math.PI*2;
+      if(visual){const destination=u<.36?ORIGIN:task.end,dx=destination.x-actor.position.x,dz=destination.z-actor.position.z;visual.rotation.y=Math.atan2(dx,dz);actor.userData.heading=visual.rotation.y;}
       if(task.telegraph){task.telegraph.material.opacity=.35+.45*Math.sin(u*Math.PI*8)**2;task.telegraph.scale.setScalar(.85+u*.25);}
       this.impulse(task,'rift-in',.32,u,()=>board.createSkyBeam(ORIGIN,0xe27aff,450,.55));
       this.impulse(task,'rift-out',.62,u,()=>board.createSkyBeam(task.end,0xff78e8,550,.7));
