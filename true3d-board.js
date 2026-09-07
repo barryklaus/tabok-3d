@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createTravelerPilot } from './character-3d-travelers.js?v=20260907G4';
 import { createMonsterPilot } from './monster-3d-models.js?v=20260907G4';
 import { PortalCinematics } from './portal-cinematics.js?v=20260907G4';
+import { makeRuinStoneMaps, makeWornHexGeometry, makeRuinFoundation, makeContactShadow } from './ruin-board-art.js?v=20260907R4';
 
 const SQRT3 = Math.sqrt(3);
 const HEX_RADIUS = .72;
@@ -10,8 +11,8 @@ const PORTAL_R = 2.08;
 const COLORS = { P: 0xa979c4, T: 0x55a8a0, G: 0xb1aa9c, B: 0x211d19, W: 0xe0c68e };
 // Keep the grey network at the same perceived value as purple and teal even
 // when it catches the moon and temple lights.
-const TILE_TINTS = { P: 0xe2d9e7, T: 0xc7d7d0, G: 0x817971, B: 0x4b4239, W: 0xf0dfbd };
-const TILE_SIDES = { P: 0x211627, T: 0x142724, G: 0x29251f, B: 0x080706, W: 0x49371f };
+const TILE_TINTS = { P: 0xffffff, T: 0xffffff, G: 0xddd8d0, B: 0xc4bfb6, W: 0xffffff };
+const TILE_SIDES = { P: 0x716779, T: 0x5a7375, G: 0x77736c, B: 0x4a4542, W: 0xa29372 };
 const PORTAL_LOOKS = {
   idle: [23, 1, new THREE.Color(0x53129a), new THREE.Color(0xd44dff)],
   rejected: [34, 1.28, new THREE.Color(0x8f174f), new THREE.Color(0xff4fb7)],
@@ -150,16 +151,6 @@ function makeStoneHeightTexture(size = 256) {
   return texture;
 }
 
-function makeTileTextureVariant(source, turn) {
-  const texture = source.clone();
-  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-  texture.center.set(.5, .5);
-  texture.rotation = turn * Math.PI / 3;
-  texture.repeat.set(1.08, 1.08);
-  texture.needsUpdate = true;
-  return texture;
-}
-
 function tileVariantFor(q, r) {
   // Stable on every client, so multiplayer boards remain visually identical.
   return Math.abs(q * 17 + r * 31 + q * r * 7) % 6;
@@ -258,8 +249,12 @@ const DOME_FRAGMENT = `
 const FAULTLINE_VERTEX = `
   varying vec2 vUv;
   void main(){
-    vUv=uv;
-    gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);
+    vec4 local=vec4(position,1.0);
+    #ifdef USE_INSTANCING
+      local=instanceMatrix*local;
+    #endif
+    vUv=local.xz/33.1+.5;
+    gl_Position=projectionMatrix*modelViewMatrix*local;
   }
 `;
 
@@ -394,10 +389,14 @@ export class TabokTrue3DBoard {
     this.textureLoader = new THREE.TextureLoader();
     await this.loadTextures();
     this.stoneHeightTexture = makeStoneHeightTexture();
+    this.ruinStoneMaps = {};
+    for (const type of ['P', 'T', 'G', 'B', 'W']) {
+      this.ruinStoneMaps[type] = makeRuinStoneMaps(this.textures.G.image, type, Math.min(4, this.renderer.capabilities.getMaxAnisotropy()));
+    }
+    this.contactShadowMaterial = makeContactShadow();
     this.makeLights();
     this.makeGround();
     this.makeBoard();
-    this.makeRuinRing();
     this.makePortal();
     this.scene.add(this.itemRoot, this.actorRoot, this.occupancyRoot, this.highlightRoot, this.effectRoot);
     this.bindInput();
@@ -468,11 +467,25 @@ export class TabokTrue3DBoard {
 
     const glowTexture = makeLanternGlowTexture();
     const flameGeometry = new THREE.SphereGeometry(.1, 8, 6);
+    const torchMaterial = new THREE.MeshStandardMaterial({ color: 0x665136, roughness: .73, metalness: .35 });
+    const torchGeometry = new THREE.CylinderGeometry(.12, .22, 1.08, 6);
+    const bowlGeometry = new THREE.CylinderGeometry(.25, .13, .19, 8);
+    const wallSites = this.config.cells.filter(cell => cell.type === 'B' && Math.max(Math.abs(cell.q), Math.abs(cell.r - 11), Math.abs(cell.q + cell.r - 11)) >= 10);
     for (let i = 0; i < 6; i++) {
       const angle = i / 6 * Math.PI * 2;
-      const x = Math.sin(angle) * 14.8, z = Math.cos(angle) * 14.8;
+      const target = new THREE.Vector3(Math.sin(angle) * 13.1, .11, Math.cos(angle) * 13.1);
+      const site = wallSites.reduce((best, cell) => {
+        const p = worldFor(idOf(cell.q, cell.r));
+        return !best || p.distanceToSquared(target) < best.distance ? { p, distance: p.distanceToSquared(target) } : best;
+      }, null);
+      const { x, z } = site ? site.p : target;
+      const stand = new THREE.Mesh(torchGeometry, torchMaterial);
+      stand.position.set(x, .74, z);
+      const bowl = new THREE.Mesh(bowlGeometry, torchMaterial);
+      bowl.position.set(x, 1.34, z);
+      this.scene.add(stand, bowl);
       const light = new THREE.PointLight(i % 2 ? 0xffb35a : 0xff7d2d, 30, 7.8, 2);
-      light.position.set(x, 1.65, z);
+      light.position.set(x, 1.52, z);
       light.userData.baseIntensity = 30;
       light.userData.phase = i * 1.73;
       const flame = new THREE.Mesh(
@@ -492,14 +505,8 @@ export class TabokTrue3DBoard {
   }
 
   makeGround() {
-    const ground = new THREE.Mesh(
-      new THREE.CircleGeometry(17.1, 96),
-      new THREE.MeshStandardMaterial({ map: this.textures.wall, bumpMap: this.stoneHeightTexture, bumpScale: .11, color: 0x2a211c, roughness: 1, metalness: 0 })
-    );
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -.08;
-    ground.receiveShadow = true;
-    this.scene.add(ground);
+    this.ruinFoundation = makeRuinFoundation(this.config.cells, worldFor, HEX_RADIUS, this.ruinStoneMaps.G);
+    this.scene.add(this.ruinFoundation);
 
     this.faultlineMaterial = new THREE.ShaderMaterial({
       uniforms: {
@@ -513,54 +520,39 @@ export class TabokTrue3DBoard {
       depthWrite: false,
       blending: THREE.AdditiveBlending
     });
-    this.faultlinePlane = new THREE.Mesh(new THREE.CircleGeometry(16.55, 96), this.faultlineMaterial);
-    this.faultlinePlane.rotation.x = -Math.PI / 2;
-    this.faultlinePlane.position.y = -.066;
+    // The luminous bed follows the board silhouette; a circular plane would
+    // reveal a floating halo outside the new cliff edge when the camera orbits.
+    const seamGeo = new THREE.CylinderGeometry(HEX_RADIUS * 1.008, HEX_RADIUS * 1.008, .006, 6);
+    seamGeo.clearGroups();
+    this.faultlinePlane = new THREE.InstancedMesh(seamGeo, this.faultlineMaterial, this.config.cells.length);
+    const seamMatrix = new THREE.Matrix4();
+    this.config.cells.forEach((cell, index) => {
+      const p = worldFor(idOf(cell.q, cell.r));
+      seamMatrix.makeTranslation(p.x, -.066, p.z);
+      this.faultlinePlane.setMatrixAt(index, seamMatrix);
+    });
     this.faultlinePlane.renderOrder = 1;
     this.scene.add(this.faultlinePlane);
-
-    const rim = new THREE.Mesh(
-      new THREE.TorusGeometry(16.75, .34, 8, 96),
-      new THREE.MeshStandardMaterial({ color: 0x21140c, roughness: .72, metalness: .25 })
-    );
-    rim.rotation.x = Math.PI / 2;
-    rim.position.y = .08;
-    rim.receiveShadow = true;
-    this.scene.add(rim);
   }
 
   makeBoard() {
     const topMaterials = {};
     const sideMaterials = {};
     for (const type of ['P', 'T', 'G', 'B', 'W']) {
-      const source = this.textures[type] || this.textures.wall;
-      topMaterials[type] = Array.from({ length: 6 }, (_, variant) => {
-        const map = makeTileTextureVariant(source, variant);
-        const relief = makeTileTextureVariant(source, variant);
-        relief.colorSpace = THREE.NoColorSpace;
-        const tint = new THREE.Color(TILE_TINTS[type]);
-        tint.offsetHSL(0, 0, (variant - 2.5) * .009);
-        return new THREE.MeshStandardMaterial({
-          map,
-          bumpMap: relief,
-          bumpScale: type === 'B' ? .035 : type === 'W' ? .058 : .074,
-          roughnessMap: relief,
-          color: tint,
-          emissive: type === 'P' ? 0x16081e : type === 'T' ? 0x03100e : 0x090705,
-          emissiveIntensity: type === 'P' ? .095 : .025,
-          roughness: type === 'W' ? .7 : type === 'P' ? .83 : .91,
-          metalness: type === 'W' ? .2 : type === 'T' ? .07 : .035
-        });
+      const maps = this.ruinStoneMaps[type];
+      topMaterials[type] = new THREE.MeshStandardMaterial({
+        map: maps.map, bumpMap: maps.bump, bumpScale: .045,
+        color: TILE_TINTS[type], roughness: .91, metalness: .015
       });
       sideMaterials[type] = new THREE.MeshStandardMaterial({
-        color: TILE_SIDES[type], roughness: type === 'W' ? .78 : .96,
-        metalness: type === 'W' ? .18 : .015
+        map: this.ruinStoneMaps.G.map, bumpMap: this.ruinStoneMaps.G.bump, bumpScale: .035,
+        color: TILE_SIDES[type], roughness: .93, metalness: .015
       });
     }
     const geometries = {
-      playable: new THREE.CylinderGeometry(HEX_RADIUS * .94, HEX_RADIUS * .98, .18, 6, 1, false),
-      blocked: new THREE.CylinderGeometry(HEX_RADIUS * .94, HEX_RADIUS * .98, .28, 6, 1, false),
-      entry: new THREE.CylinderGeometry(HEX_RADIUS, HEX_RADIUS * 1.02, .24, 6, 1, false)
+      playable: Array.from({ length: 6 }, (_, v) => makeWornHexGeometry(HEX_RADIUS * .988, .18, v)),
+      blocked: Array.from({ length: 6 }, (_, v) => makeWornHexGeometry(HEX_RADIUS * .988, .28, v)),
+      entry: Array.from({ length: 6 }, (_, v) => makeWornHexGeometry(HEX_RADIUS, .24, v))
     };
     // Each tile used to be a separate mesh and shadow caster. Grouping equal
     // tiles into instanced batches preserves every textured hex while reducing
@@ -580,8 +572,8 @@ export class TabokTrue3DBoard {
     const matrix = new THREE.Matrix4();
     for (const batch of batches.values()) {
       const mesh = new THREE.InstancedMesh(
-        geometries[batch.shape],
-        [sideMaterials[batch.type], topMaterials[batch.type][batch.variant], sideMaterials[batch.type]],
+        geometries[batch.shape][batch.variant],
+        [sideMaterials[batch.type], topMaterials[batch.type], sideMaterials[batch.type]],
         batch.cells.length
       );
       const instanceIds = [];
@@ -589,6 +581,7 @@ export class TabokTrue3DBoard {
         const position = worldFor(id);
         matrix.makeTranslation(position.x, y, position.z);
         mesh.setMatrixAt(instanceId, matrix);
+        mesh.setColorAt(instanceId, new THREE.Color().setScalar(.94 + batch.variant * .024));
         instanceIds.push(id);
         this.cells.set(id, { mesh, instanceId });
       });
@@ -599,19 +592,6 @@ export class TabokTrue3DBoard {
       mesh.userData = { instanceIds, playable: batch.playable };
       this.scene.add(mesh);
       if (batch.playable || batch.type === 'W') this.pickables.push(mesh);
-    }
-  }
-
-  makeRuinRing() {
-    const material = new THREE.MeshStandardMaterial({ map: this.textures.wall, bumpMap: this.stoneHeightTexture, bumpScale: .13, color: 0x30251e, roughness: 1 });
-    const columnGeo = new THREE.BoxGeometry(1.15, 3.8, .9);
-    for (let i = 0; i < 28; i++) {
-      const angle = i / 28 * Math.PI * 2;
-      const column = new THREE.Mesh(columnGeo, material);
-      column.position.set(Math.sin(angle) * 17.2, 1.75, Math.cos(angle) * 17.2);
-      column.rotation.y = angle;
-      column.castShadow = column.receiveShadow = true;
-      this.scene.add(column);
     }
   }
 
@@ -1017,6 +997,12 @@ export class TabokTrue3DBoard {
     group.updateMatrixWorld(true);
     const bounds = new THREE.Box3().setFromObject(visual);
     if (Number.isFinite(bounds.min.y)) visual.position.y += (major ? .26 : 0) - bounds.min.y;
+    const contact = new THREE.Mesh(new THREE.PlaneGeometry(major ? 1.35 : .85, major ? 1.35 : .85), this.contactShadowMaterial.clone());
+    contact.rotation.x = -Math.PI / 2;
+    contact.position.y = .009;
+    contact.material.opacity = major ? .35 : .85;
+    contact.raycast = () => {};
+    group.add(contact);
     if (!group.userData.summoning && !group.userData.departing) group.position.copy(worldFor(actor.pos));
     group.userData.actorId = actor.id;
     group.userData.actorKey = `${actor.kind}|${actor.charId || ''}|${major ? 1 : 0}`;

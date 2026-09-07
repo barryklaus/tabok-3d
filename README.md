@@ -1,6 +1,30 @@
 # TABOK — True 3D Board Alpha
 
-Version: **v0.54.0 — Ground Contact · 2026.09.07.G4**
+Version: **v0.55.0 — Fractured Sanctuary · 2026.09.07.R4**
+
+## Fractured Sanctuary board art
+
+- Weathered charcoal stone replaces the polished network surfaces. Purple and
+  teal mineral staining, carved traces, coherent cracks, and small mineral flecks
+  preserve the original network colors while giving them a shared stone language.
+- Hexes have clipped corners and narrow worn bevels. Every playable contact
+  surface remains level at its original height; coordinates and picking are unchanged.
+- A stacked rock foundation follows the original board perimeter, replacing the
+  circular platter. Broken masonry and rubble occupy only blocked perimeter cells.
+- Torches now sit on physical stands along the outer wall. Existing portal light,
+  intermittent seam lightning, and Major escalation remain active.
+- Soft contact shadows follow Travelers and monsters, including in lower quality
+  modes that omit expensive character shadow maps.
+- Five pairs of shared 512px stone/relief maps are derived from existing stone art
+  at load time, with no new image downloads. Wear variations use geometry UVs and
+  instance colors. Cliffs, rubble, and masonry use three instanced batches over
+  one closed foundation mesh and add no dynamic lights.
+
+Validation: `node --test tests/portal-events.test.cjs tests/ruin-board-art.test.cjs`.
+Actual frame rate depends on device, viewport, quality setting, and scene activity.
+The isolated `tests/board-art-preview.html` page uses the real board renderer,
+six Travelers and a Minor, and reports frame timing and renderer counts. It also
+allows orbiting, quality changes, and toggling Major escalation without a room.
 
 ## Ground Contact correction pass
 
