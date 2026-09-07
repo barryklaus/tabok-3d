@@ -1,6 +1,8 @@
 # TABOK — True 3D Board Alpha
 
-Version: **v0.55.0 — Fractured Sanctuary · 2026.09.07.R4**
+Version: **v0.56.0 — Ruin Focus · 2026.09.07.I1**
+
+Ruin Focus makes Grand Plunder a single-target tactical action with an automatic fast volley, adds click-to-orbit focus for hexes and every board actor, grounds Traveler movement in walk/run locomotion, gives Minor summons a faster heavy landing, expands Answer-or-Die readability, and introduces worn ruin-stone dice whose result marks alone ignite.
 
 ## Fractured Sanctuary board art
 

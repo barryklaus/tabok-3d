@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 const clamp = value => Math.max(0, Math.min(1, value));
 const smooth = value => { const t = clamp(value); return t * t * (3 - 2 * t); };
-const DURATIONS = { major: 6800, minor: 2800, crossing: 3400, rejection: 2900, death: 5200, pounce: 2400, fireball: 1700 };
+const DURATIONS = { major: 6800, minor: 1450, crossing: 3400, rejection: 2900, death: 5200, pounce: 2400, fireball: 1700 };
 const ORIGIN = new THREE.Vector3(0, .42, 0);
 const CROSSING_TALKS = [
   'Bye, suckers!','Try not to miss me.','The Portal likes me better.','Catch up, slowpokes!','I call this winning.','Enjoy the ruins!','Save me a seat—eventually.','Too stylish to stay trapped.','See you on the better side.','That is how legends leave.',
@@ -141,15 +141,18 @@ export class PortalCinematics {
       board.controls.target.lerpVectors(c.target,c.focus,weight);board.camera.lookAt(board.controls.target);
     }
     if (event.type === 'major' || event.type === 'minor') {
-      const major = event.type === 'major', riseEnd = major ? .57 : .32;
+      const major = event.type === 'major', riseEnd = major ? .57 : .25;
       const rise = smooth((u - .12) / (riseEnd - .12)), flight = smooth((u - riseEnd) / (1 - riseEnd));
       actor.position.lerpVectors(ORIGIN, task.end, flight);
-      actor.position.y = flight > 0 ? THREE.MathUtils.lerp(major ? 2.1 : 1.1, task.end.y, flight) + Math.sin(flight * Math.PI) * (major ? .7 : 1.65) : -.9 + rise * (major ? 3 : 2);
+      actor.position.y = flight > 0 ? THREE.MathUtils.lerp(major ? 2.1 : 1.65, task.end.y, flight) + Math.sin(flight * Math.PI) * (major ? .7 : .22) : -.9 + rise * (major ? 3 : 2.55);
       actor.scale.setScalar(.02 + rise * .98);
       if(visual){const dx=task.end.x-actor.position.x,dz=task.end.z-actor.position.z;visual.rotation.y=Math.atan2(dx,dz)+(major?Math.sin(rise*Math.PI)*.08:0);actor.userData.heading=visual.rotation.y;}
       if (major) {
         [.15,.3,.49].forEach((at,index) => this.impulse(task,'bolt'+index,at,u,()=>board.lightningStrike(index===2?ORIGIN:new THREE.Vector3(index?2.6:-2.8,0,index?-2:2),index===2?1.2:.65)));
-      } else this.impulse(task,'spit',.27,u,()=>board.createSkyBeam(ORIGIN,0xe27aff,950,.9));
+      } else {
+        this.impulse(task,'spit',.2,u,()=>board.createSkyBeam(ORIGIN,0xe27aff,520,.75));
+        this.impulse(task,'impact',.78,u,()=>{board.summonCinematic={major:false,started:performance.now(),duration:520};board.createSkyBeam(task.end,0xff4f7f,360,.48)});
+      }
     } else if (event.type === 'crossing') {
       const leap = smooth((u - .33) / .47), sink = smooth((u - .68) / .18);
       actor.position.lerpVectors(task.start, ORIGIN, leap);

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createTravelerPilot } from './character-3d-travelers.js?v=20260907G4';
 import { createMonsterPilot } from './monster-3d-models.js?v=20260907G4';
-import { PortalCinematics } from './portal-cinematics.js?v=20260907G4';
+import { PortalCinematics } from './portal-cinematics.js?v=20260907I1';
 import { makeRuinStoneMaps, makeWornHexGeometry, makeRuinFoundation, makeContactShadow } from './ruin-board-art.js?v=20260907R4';
 
 const SQRT3 = Math.sqrt(3);
@@ -791,8 +791,7 @@ export class TabokTrue3DBoard {
     this.canvas.addEventListener('pointermove', event => {
       if (this.pointerStart && Math.hypot(event.clientX - this.pointerStart.x, event.clientY - this.pointerStart.y) > 5) return;
       const hit = this.pick(event);
-      const object = hit?.object;
-      const id = this.idForHit(hit);
+      const id = this.actorIdForHit(hit) || this.idForHit(hit);
       if (id !== this.hovered) {
         this.hovered = id;
         this.canvas.style.cursor = id ? 'pointer' : 'grab';
@@ -810,11 +809,11 @@ export class TabokTrue3DBoard {
       if (!start || Math.hypot(event.clientX - start.x, event.clientY - start.y) > 5) return;
       const hit = this.pick(event);
       if (!hit) return;
-      if (hit.object.userData.pickPortal) this.config.onPortal?.();
-      else {
-        const id = this.idForHit(hit);
-        if (id) this.config.onHex?.(id);
-      }
+      const id = this.idForHit(hit), actorId = this.actorIdForHit(hit);
+      this.focusOn(actorId || id, hit.point);
+      if (actorId) this.config.onActor?.(actorId);
+      else if (id === 'PORTAL') this.config.onPortal?.();
+      else if (id) this.config.onHex?.(id);
     });
     this.canvas.addEventListener('pointerleave', () => {
       this.pointerStart = null;
@@ -833,15 +832,33 @@ export class TabokTrue3DBoard {
     this.pointer.x = (event.clientX - rect.left) / rect.width * 2 - 1;
     this.pointer.y = -(event.clientY - rect.top) / rect.height * 2 + 1;
     this.raycaster.setFromCamera(this.pointer, this.camera);
-    return this.raycaster.intersectObjects(this.pickables, false)[0] || null;
+    return this.raycaster.intersectObjects([...this.pickables, this.actorRoot], true)[0] || null;
+  }
+
+  actorIdForHit(hit) {
+    let object = hit?.object;
+    while (object) {
+      if (object.userData?.actorId) return object.userData.actorId;
+      object = object.parent;
+    }
+    return null;
   }
 
   idForHit(hit) {
     const object = hit?.object;
     if (!object) return null;
-    if (object.userData.pickPortal) return 'PORTAL';
+    let parent = object;
+    while (parent) { if (parent.userData?.pickPortal) return 'PORTAL'; parent = parent.parent; }
     if (Number.isInteger(hit.instanceId) && object.userData.instanceIds) return object.userData.instanceIds[hit.instanceId] || null;
     return object.userData.id || null;
+  }
+
+  focusOn(id, point = null) {
+    if (!id || !this.controls) return;
+    const actor = this.actors.get(id);
+    const destination = actor ? actor.position.clone() : id === 'PORTAL' ? worldFor('PORTAL') : point ? point.clone() : worldFor(id);
+    destination.y = actor?.userData.major ? .7 : .15;
+    this.cameraFocus = { from: this.controls.target.clone(), to: destination, started: performance.now(), duration: 360 };
   }
 
   makeSprite(url, width, height, centerY = .04) {
@@ -1315,11 +1332,7 @@ export class TabokTrue3DBoard {
     const journeyLength=Math.max(1,Number(traversal.journeyLength)||1),journeyStep=Math.max(0,Number(traversal.journeyStep)||0);
     let movementMode='walk';
     if(actor.userData.major) movementMode='levitate';
-    else if(actor.userData.actorKind==='player'){
-      const key=[id,from,to,journeyLength,journeyStep].join('|'),seed=[...key].reduce((n,ch)=>(n*33+ch.charCodeAt(0))>>>0,17);
-      const quiet=['walk','walk','crouch','jump'],far=['run','run','acro'];
-      const choices=journeyLength>=3?far:quiet;movementMode=choices[seed%choices.length];
-    }
+    else if(actor.userData.actorKind==='player') movementMode=journeyLength>=3?'run':'walk';
     visual?.userData.setMode?.(movementMode);
     return new Promise(resolve => {
       const step = now => {
@@ -1336,7 +1349,8 @@ export class TabokTrue3DBoard {
   showActorSpeech(id, text, duration = 2500, className = '') {
     const actor=this.actors.get(id);if(!actor||!text)return;
     const node=document.createElement('div');node.className='actor-speech-bubble'+(className?' '+className:'');node.textContent=text;node.setAttribute('role','status');
-    document.body.append(node);const entry={id,node,height:className==='heart-loss'?1.62:1.35};this.actorSpeech.add(entry);this.positionActorSpeech(entry);
+    const visual=actor.userData.visual3D,bounds=visual?new THREE.Box3().setFromObject(visual):null,head=bounds&&Number.isFinite(bounds.max.y)?Math.max(1.15,bounds.max.y-actor.position.y+.14):1.35;
+    document.body.append(node);const entry={id,node,height:className==='heart-loss'?head+.12:head};this.actorSpeech.add(entry);this.positionActorSpeech(entry);
     setTimeout(()=>{node.classList.add('leaving');setTimeout(()=>{node.remove();this.actorSpeech.delete(entry)},220)},Math.max(500,duration-220));
   }
 
@@ -1347,7 +1361,7 @@ export class TabokTrue3DBoard {
 
   damageFeedback(id, hearts = 1) {
     const actor=this.actors.get(id);if(!actor||hearts<1)return;
-    this.showActorSpeech(id,'−'+hearts+' '+(hearts===1?'♥':'♥♥'),'heart-loss',1650);
+    this.showActorSpeech(id,'−'+hearts+' '+(hearts===1?'♥':'♥♥'),1650,'heart-loss');
     clearTimeout(actor.userData.damageFlashTimer);
     if(!actor.userData.damageMaterials){actor.userData.damageMaterials=[];actor.traverse(node=>{if(!node.isMesh)return;for(const mat of(Array.isArray(node.material)?node.material:[node.material])){if(!mat?.emissive||actor.userData.damageMaterials.some(x=>x.mat===mat))continue;actor.userData.damageMaterials.push({mat,color:mat.emissive.clone(),intensity:mat.emissiveIntensity||0})}})}
     actor.userData.damageMaterials.forEach(({mat})=>{mat.emissive.set(0xff183d);mat.emissiveIntensity=1.45});
@@ -1383,6 +1397,7 @@ export class TabokTrue3DBoard {
       const target = this.majorPresent ? 1 : 0;
       this.faultlineMaterial.uniforms.uMajor.value += (target - this.faultlineMaterial.uniforms.uMajor.value) * .035;
     }
+    if(this.cameraFocus){const t=Math.min(1,(now-this.cameraFocus.started)/this.cameraFocus.duration),eased=1-Math.pow(1-t,3);this.controls.target.lerpVectors(this.cameraFocus.from,this.cameraFocus.to,eased);if(t>=1)this.cameraFocus=null}
     this.controls.update();
     this.actorSpeech.forEach(entry=>this.positionActorSpeech(entry));
     const cinematic=this.summonCinematic,cinematicAge=cinematic?(now-cinematic.started):Infinity,cinematicLive=cinematicAge<cinematic?.duration;

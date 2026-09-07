@@ -49,6 +49,7 @@ body:has(#messageOverlay.portal-local:not(.hidden))>.shell{visibility:visible!im
 @media(max-width:500px){#messageOverlay.portal-local .dialog{left:50vw;top:clamp(72px,calc(var(--portal-screen-y,50dvh) - 310px),calc(100dvh - 340px));width:min(340px,calc(100vw - 16px))!important;max-height:min(330px,calc(100dvh - 90px))!important;padding:12px!important}.portal-magic-words{left:50vw}}
 @media(max-height:500px){#messageOverlay.portal-local .dialog{top:64px!important;max-height:calc(100dvh - 76px)!important;width:340px!important}#messageOverlay.portal-local h2{font-size:18px!important}.portal-magic-words{top:max(105px,calc(var(--portal-screen-y,50dvh) - 40px))}}
 @media(prefers-reduced-motion:reduce){.portal-magic-words.visible,#messageOverlay.portal-local .dialog,.actor-speech-bubble{animation:none!important;opacity:1}}
+.actor-speech-bubble{border-radius:14px!important;transform-origin:50% 100%!important}.actor-speech-bubble:after{left:50%!important;transform:translateX(-50%) rotate(45deg)!important}
 @media(max-height:500px){
  #messageOverlay.portal-local .dialog{padding:8px!important}
  #messageOverlay.portal-local .card,#messageOverlay.portal-local .portal-card-flip{height:64px!important;min-height:64px!important}

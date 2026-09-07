@@ -20,16 +20,17 @@ function faceTexture(label, kind) {
   const rune = kind === 'Rune';
   const glow = movement ? '#ffb52f' : rune ? '#55e8ff' : '#b248ff';
   const glowLight = movement ? '#fff0a0' : rune ? '#d9fbff' : '#f2b9ff';
-  const metal = movement ? '#dca543' : rune ? '#a99ce9' : '#c6a06f';
+  const metal = movement ? '#8d7045' : rune ? '#685b82' : '#705a48';
 
-  // Dark volcanic stone with a warm-metal or violet-metal identity.
+  // Flat, worn ruin stone matching the board. Energy belongs to the result,
+  // not to the body of a die that is still tumbling.
   const base = context.createRadialGradient(170, 125, 20, 256, 256, 360);
-  base.addColorStop(0, movement ? '#30251d' : rune ? '#132d37' : '#25162f');
-  base.addColorStop(.48, movement ? '#171310' : rune ? '#0b171f' : '#140d19');
-  base.addColorStop(1, '#050507');
+  base.addColorStop(0, movement ? '#4a4136' : rune ? '#313747' : '#3f3544');
+  base.addColorStop(.48, movement ? '#39332c' : rune ? '#272c37' : '#322b35');
+  base.addColorStop(1, movement ? '#25221e' : rune ? '#1b1e25' : '#221d24');
   context.fillStyle = base; context.fillRect(0, 0, 512, 512);
 
-  // Fine stone grain and restrained glowing cracks.
+  // Fine stone grain and non-emissive fractures.
   let seed = label.split('').reduce((sum, letter) => sum + letter.charCodeAt(0), movement ? 73 : 191);
   const random = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
   for (let index = 0; index < 850; index++) {
@@ -37,7 +38,7 @@ function faceTexture(label, kind) {
     context.fillStyle = `rgba(${shade + (movement ? 8 : 5)},${shade},${shade + (movement ? 0 : 11)},${.05 + random() * .12})`;
     context.fillRect(random() * 512, random() * 512, 1 + random() * 3, 1 + random() * 3);
   }
-  context.save(); context.strokeStyle = movement ? 'rgba(255,170,41,.22)' : rune ? 'rgba(76,227,255,.3)' : 'rgba(185,70,255,.3)'; context.lineWidth = 2;
+  context.save(); context.strokeStyle = 'rgba(7,6,8,.72)'; context.lineWidth = 3;
   for (let crack = 0; crack < 8; crack++) {
     let x = 95 + random() * 320, y = 85 + random() * 340; context.beginPath(); context.moveTo(x, y);
     for (let step = 0; step < 4; step++) { x += (random() - .5) * 54; y += 16 + random() * 30; context.lineTo(x, y); }
@@ -46,21 +47,21 @@ function faceTexture(label, kind) {
   context.restore();
 
   // Double metallic filigree frame.
-  context.lineJoin = 'round'; context.strokeStyle = metal; context.shadowColor = glow; context.shadowBlur = 10; context.lineWidth = 18;
-  context.strokeRect(30, 30, 452, 452); context.shadowBlur = 0; context.lineWidth = 4; context.strokeStyle = glowLight; context.strokeRect(55, 55, 402, 402);
-  context.strokeStyle = movement ? 'rgba(255,202,91,.72)' : rune ? 'rgba(160,245,255,.78)' : 'rgba(215,146,255,.72)'; context.lineWidth = 3;
+  context.lineJoin = 'round'; context.strokeStyle = metal; context.shadowBlur = 0; context.lineWidth = 15;
+  context.strokeRect(30, 30, 452, 452); context.lineWidth = 3; context.strokeStyle = 'rgba(205,190,164,.32)'; context.strokeRect(55, 55, 402, 402);
+  context.strokeStyle = 'rgba(189,170,140,.4)'; context.lineWidth = 3;
   [[72,72,1,1],[440,72,-1,1],[72,440,1,-1],[440,440,-1,-1]].forEach(([x,y,sx,sy]) => {
     context.beginPath(); context.moveTo(x, y + sy * 54); context.quadraticCurveTo(x, y, x + sx * 54, y); context.stroke();
     context.beginPath(); context.moveTo(x + sx * 17, y + sy * 17); context.lineTo(x + sx * 34, y + sy * 34); context.stroke();
   });
 
   const orb = (x, y, radius = 46) => {
-    context.save(); context.shadowColor = glow; context.shadowBlur = 30;
-    context.fillStyle = movement ? '#ff9e20' : rune ? '#27cfe8' : '#9b28ed'; context.beginPath(); context.arc(x, y, radius + 9, 0, Math.PI * 2); context.fill();
+    context.save(); context.shadowBlur = 0;
+    context.fillStyle = '#171318'; context.beginPath(); context.arc(x, y, radius + 9, 0, Math.PI * 2); context.fill();
     const core = context.createRadialGradient(x - radius * .24, y - radius * .3, 2, x, y, radius);
     core.addColorStop(0, '#fffde4'); core.addColorStop(.25, glowLight); core.addColorStop(.62, glow); core.addColorStop(1, movement ? '#743100' : rune ? '#003c52' : '#35004f');
     context.fillStyle = core; context.beginPath(); context.arc(x, y, radius, 0, Math.PI * 2); context.fill();
-    context.shadowBlur = 0; context.strokeStyle = metal; context.lineWidth = 10; context.stroke();
+    context.strokeStyle = metal; context.lineWidth = 10; context.stroke();
     context.strokeStyle = 'rgba(255,255,255,.52)'; context.lineWidth = 3; context.beginPath(); context.arc(x, y, radius - 10, -.9, 1.45); context.stroke(); context.restore();
   };
 
@@ -68,7 +69,7 @@ function faceTexture(label, kind) {
     const positions = value === 1 ? [[256,256]] : value === 2 ? [[178,178],[334,334]] : [[166,166],[256,256],[346,346]];
     positions.forEach(([x,y]) => orb(x,y,value === 3 ? 42 : 49));
   };
-  const symbolStroke = () => { context.strokeStyle = glowLight; context.lineWidth = 18; context.lineCap = 'round'; context.lineJoin = 'round'; context.shadowColor = glow; context.shadowBlur = 24; };
+  const symbolStroke = () => { context.strokeStyle = glowLight; context.lineWidth = 18; context.lineCap = 'round'; context.lineJoin = 'round'; context.shadowBlur = 0; };
   const arrowHead = (x, y, angle) => {
     const length = 29, spread = .62; context.beginPath();
     context.moveTo(x - Math.cos(angle - spread) * length, y - Math.sin(angle - spread) * length); context.lineTo(x, y);
@@ -101,7 +102,7 @@ function faceTexture(label, kind) {
   const drawRune = power => {
     context.save(); symbolStroke(); context.strokeStyle = glowLight; context.fillStyle = glowLight; context.translate(256,256);
     const runeGem = (x,y,r=24) => {
-      context.save(); context.shadowColor=glow; context.shadowBlur=24; context.fillStyle=glow;
+      context.save(); context.shadowBlur=0; context.fillStyle=glow;
       context.beginPath(); context.arc(x,y,r,0,Math.PI*2); context.fill(); context.strokeStyle=metal; context.lineWidth=7; context.stroke(); context.restore();
     };
     if (power === '×2' || power === '×3') {
@@ -132,8 +133,11 @@ function faceTexture(label, kind) {
   };
 
   if (movement) drawMovement(Number(label)); else if (rune) drawRune(label); else drawAction(label);
-  const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = 8; return texture;
+  const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace; texture.anisotropy = 8;
+  const glowCanvas=document.createElement('canvas');glowCanvas.width=glowCanvas.height=512;const glowContext=glowCanvas.getContext('2d'),source=context.getImageData(0,0,512,512),mask=glowContext.createImageData(512,512);
+  for(let y=78;y<434;y++)for(let x=78;x<434;x++){const i=(y*512+x)*4,luma=source.data[i]*.2126+source.data[i+1]*.7152+source.data[i+2]*.0722;if(luma>145){const value=Math.min(255,Math.max(0,(luma-145)*2.35));mask.data[i]=mask.data[i+1]=mask.data[i+2]=value;mask.data[i+3]=255}}
+  glowContext.putImageData(mask,0,0);const emissiveMap=new THREE.CanvasTexture(glowCanvas);emissiveMap.colorSpace=THREE.SRGBColorSpace;emissiveMap.anisotropy=8;
+  return {texture,emissiveMap};
 }
 
 function resultFaceIndex(labels, result) {
@@ -179,20 +183,20 @@ export class TabokDice3D {
   }
 
   clearDice() {
-    this.dice.forEach(die => { this.scene.remove(die); die.geometry.dispose(); die.material.forEach(material => { material.map?.dispose(); material.dispose(); }); });
+    this.dice.forEach(die => { this.scene.remove(die); die.geometry.dispose(); die.material.forEach(material => { material.map?.dispose(); material.emissiveMap?.dispose(); material.dispose(); }); });
     this.dice = [];
   }
 
   buildDice(kind, x) {
     const labels = FACE_SETS[kind];
     const materials = labels.map(label => {
-      const texture = faceTexture(label, kind);
+      const {texture,emissiveMap} = faceTexture(label, kind);
       return new THREE.MeshStandardMaterial({
-        map: texture, bumpMap: texture, bumpScale: .045,
-        color: 0xffffff, roughness: .31, metalness: .62
+        map: texture, emissiveMap, emissive:0x000000, emissiveIntensity:0, bumpMap: texture, bumpScale: .026,
+        color: 0xffffff, roughness: .86, metalness: .08
       });
     });
-    const die = new THREE.Mesh(new RoundedBoxGeometry(2.05, 2.05, 2.05, 4, .18), materials);
+    const die = new THREE.Mesh(new RoundedBoxGeometry(2.05, 2.05, 2.05, 5, .24), materials);
     die.position.set(x, 1.05, 0); die.castShadow = true; die.receiveShadow = true; die.userData = { kind, labels };
     this.scene.add(die); this.dice.push(die); return die;
   }
@@ -245,7 +249,7 @@ export class TabokDice3D {
           this.dice.forEach((die, index) => {
             die.position.set(landings[index],1.05,0); die.quaternion.copy(starts[index].target);
             const material = die.material[die.userData.resultFace];
-            material.emissive.set(die.userData.kind === 'Movement' ? 0x7b3514 : die.userData.kind === 'Rune' ? 0x075f73 : 0x53216f); material.emissiveIntensity = .32;
+            material.emissive.set(die.userData.kind === 'Movement' ? 0xffaa38 : die.userData.kind === 'Rune' ? 0x50e8ff : 0xd45aff); material.emissiveIntensity = 1.45;
           });
           this.canvas.classList.remove('casting'); this.canvas.classList.add('revealed'); this.render(); resolve(true);
         }
