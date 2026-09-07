@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createCosmicSanctuary } from './cosmic-sanctuary.js?v=20260907C1';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createTravelerPilot } from './character-3d-travelers.js?v=20260907G4';
 import { createMonsterPilot } from './monster-3d-models.js?v=20260907G4';
@@ -396,6 +397,7 @@ export class TabokTrue3DBoard {
     this.contactShadowMaterial = makeContactShadow();
     this.makeLights();
     this.makeGround();
+    this.cosmicSanctuary = createCosmicSanctuary(this.scene, this.ruinStoneMaps.G);
     this.makeBoard();
     this.makePortal();
     this.scene.add(this.itemRoot, this.actorRoot, this.occupancyRoot, this.highlightRoot, this.effectRoot);
@@ -1392,6 +1394,7 @@ export class TabokTrue3DBoard {
     if (this.suspended) return;
     this.tuneResolution(now);
     const time = (now - this.startedAt) / 1000;
+    this.cosmicSanctuary?.update(time, this.quality, matchMedia('(prefers-reduced-motion: reduce)').matches);
     if (this.faultlineMaterial) {
       this.faultlineMaterial.uniforms.uTime.value = time;
       const target = this.majorPresent ? 1 : 0;
