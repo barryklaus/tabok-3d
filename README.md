@@ -1,6 +1,13 @@
 # TABOK — True 3D Board Alpha
 
-Version: **v0.57.1 — Free Camera · 2026.09.08.A2**
+Version: **v0.58.0 — Celestial Instrument UI · 2026.09.08.B1**
+
+Celestial Instrument replaces the heavy card-and-panel treatment with an
+ultra-light ancient-observatory interface: transparent side rails, antique-gold
+hairlines, editorial Roman typography, open ceremonial frames, concentric
+portrait markings, and restrained selected-state illumination. The treatment
+is CSS-only—no extra canvas pass, blur filter, animation loop, or texture
+download—so the richer presentation has negligible impact on gameplay frame rate.
 
 Free Camera restores conventional desktop controls: hold the left mouse button
 and drag to orbit, hold the right mouse button and drag to pan the camera and
