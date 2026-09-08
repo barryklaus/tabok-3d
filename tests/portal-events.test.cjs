@@ -178,3 +178,23 @@ test('Correction pass adds heart feedback, Major reroll and delayed carried verd
  assert.match(css,/\.actor-speech-bubble\.heart-loss/);
  assert.match(cinematics,/event\.type==='crossing'\?4200:3950/);
 });
+
+test('Starpath removes replay, resolves automation authoritatively, shortens Portal routes and simplifies lobby start',()=>{
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ const multiplayer=fs.readFileSync(path.join(root,'multiplayer.js'),'utf8');
+ const cosmic=fs.readFileSync(path.join(root,'cosmic-sanctuary.js'),'utf8');
+ assert.doesNotMatch(html,/id='replayHighlight'|id="replayHighlight"|Replay last moment/);
+ assert.match(html,/function automationAuthority\(\)/);
+ assert.match(html,/if\(busy\)\{actionAutoTimer=setTimeout\(attempt,120\)/);
+ assert.match(multiplayer,/window\.TabokCanRunAutomation=\(\)=>!room\|\|room\.phase!=='game'\|\|isHost/);
+ assert.match(html,/if\(!routes\.has\('PORTAL'\)\)routes\.set\('PORTAL',route\)/);
+ assert.match(html,/game\.turn\.remaining>=1&&gateway\.has/);
+ assert.match(html,/surrenders any unused movement/);
+ assert.match(multiplayer,/capacity:2/);
+ assert.match(multiplayer,/hostSeat\.kind = 'human'/);
+ assert.match(multiplayer,/mp-start-path/);
+ assert.match(multiplayer,/mpPrimaryRoll/);
+ assert.match(cosmic,/const width = 4096, height = 2048/);
+ assert.match(cosmic,/for \(const offset of \[-width,0,width\]\)/);
+ assert.match(cosmic,/LinearMipmapLinearFilter/);
+});

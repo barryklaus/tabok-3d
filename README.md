@@ -1,6 +1,16 @@
 # TABOK — True 3D Board Alpha
 
-Version: **v0.58.0 — Celestial Instrument UI · 2026.09.08.B1**
+Version: **v0.59.0 — Starpath · 2026.09.08.B2**
+
+Starpath removes Replay Last Moment, lets a Traveler enter the Portal as soon
+as any legal route reaches it within the remaining movement, and makes automatic
+TAKE/GIVE/STEAL/Grand Plunder host-authoritative with a busy-animation retry.
+New multiplayer rooms begin as an approachable two-player room: the host and
+first arriving friend are claimed automatically, and a three-step lobby path
+puts each player's initiative roll front and center. The surrounding sky is now
+a seamless, static 4096×2048 equirectangular star field with layered nebulae,
+thousands of varied stars, and mipmapped filtering; it adds no per-frame sky
+animation or draw calls.
 
 Celestial Instrument replaces the heavy card-and-panel treatment with an
 ultra-light ancient-observatory interface: transparent side rails, antique-gold

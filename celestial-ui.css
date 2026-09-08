@@ -210,6 +210,14 @@ select,input,textarea{
 .room-code{background:transparent!important;border:0!important;border-top:1px solid var(--cel-faint)!important;border-bottom:1px solid var(--cel-faint)!important}
 .room-code b{font-family:var(--cel-serif)!important;font-weight:400!important;letter-spacing:.3em!important;color:var(--cel-bright)!important}
 .mp-alert:empty{display:none}
+.mp-start-path{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin:16px 0 10px;border-top:1px solid var(--cel-faint);border-bottom:1px solid var(--cel-faint)}
+.mp-start-path span{position:relative;padding:12px 9px;color:#6f6553;font:600 7px/1.35 var(--cel-sans);letter-spacing:.14em;text-align:center;text-transform:uppercase}
+.mp-start-path span+span::before{content:"";position:absolute;left:0;top:25%;bottom:25%;width:1px;background:var(--cel-faint)}
+.mp-start-path b{display:inline-grid;place-items:center;width:18px;height:18px;margin-right:6px;border:1px solid var(--cel-faint);border-radius:50%;color:var(--cel-dim);font:400 10px var(--cel-serif)}
+.mp-start-path .current{color:var(--cel-bright);background:linear-gradient(90deg,transparent,rgba(184,150,88,.08),transparent)}
+.mp-start-path .current b{border-color:var(--cel-bright);box-shadow:0 0 12px rgba(221,196,142,.16)}
+.mp-start-path .done{color:#a99a7e}.mp-start-path .done b{border-color:var(--cel-gold);color:var(--cel-bright)}
+.mp-primary-roll{margin:0 0 15px!important;min-height:50px!important;background:linear-gradient(90deg,rgba(184,150,88,.04),rgba(184,150,88,.18),rgba(184,150,88,.04))!important}
 .global-chat{position:relative}
 .global-chat h3,.global-chat-title{font-family:var(--cel-sans)!important;color:var(--cel-gold)!important;text-transform:uppercase;letter-spacing:.22em!important;font-size:8px!important}
 
@@ -243,6 +251,7 @@ select,input,textarea{
   .action-decision-overlay{padding:0 8px 8px!important}.action-decision-shell{width:100%!important}
   .mp-dialog{padding:24px 16px 18px!important;border-radius:40px 40px 0 0!important}
   .mp-landing{grid-template-columns:1fr!important;gap:12px!important}.mp-landing::before{display:none}.mp-choice{min-height:88px}
+  .mp-start-path span{padding:9px 3px;font-size:6px!important;letter-spacing:.08em!important}.mp-start-path b{display:grid;margin:0 auto 5px}
   button,.primary{min-height:42px}
 }
 

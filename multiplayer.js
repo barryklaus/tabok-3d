@@ -2,7 +2,7 @@
 (() => {
   'use strict';
 
-  const VERSION = 'v0.47.2 Mobile Portal Judgment · A3';
+  const VERSION = 'v0.59.0 Starpath · B2';
   const TOKEN_KEY = 'tabok-multiplayer-token';
   const NAME_KEY = 'tabok-multiplayer-name';
   const NETWORK = window.TABOK_NETWORK || {};
@@ -133,7 +133,7 @@
 
   function newRoom(id) {
     return {
-      id, phase:'lobby', capacity:6, speed:'fast', quality:'full', autoTreasureActions:false, hostToken:token, rolling:null,
+      id, phase:'lobby', capacity:2, speed:'fast', quality:'full', autoTreasureActions:false, hostToken:token, rolling:null,
       seats: PLAYER_DATA.map((data, i) => ({slot:data[0], kind:'open', owner:null, ownerLabel:'', connected:false, charId:CHARACTERS[i].id, customName:CHARACTERS[i].name, roll:null})),
       chat:[{system:true, text:'The room is open. Claim a Traveler or let the host summon CPU companions.'}]
     };
@@ -169,6 +169,9 @@
     ensurePeer(id, openId => {
       isHost = true;
       room = newRoom(openId);
+      const hostSeat = room.seats[0];
+      hostSeat.kind = 'human'; hostSeat.owner = token; hostSeat.ownerLabel = localDisplayName || 'Host';
+      hostSeat.connected = true; hostSeat.customName = uniqueName(localDisplayName || CHARACTERS[0].name, hostSeat.slot);
       room.relayHost = relayState === 'ready';
       setPill('HOST · ' + roomCode(openId), 'online');
       peer.on('connection', acceptConnection);
@@ -220,7 +223,15 @@
     if (data.type === 'hello') {
       connections.set(data.token, conn);
       connectionTokens.set(conn.peer, data.token);
-      const seat = room?.seats.find(s => s.owner === data.token);
+      let seat = room?.seats.find(s => s.owner === data.token);
+      if (!seat && room?.phase === 'lobby') {
+        seat = activeSeats().find(candidate => candidate.kind === 'open');
+        if (seat) {
+          seat.kind = 'human'; seat.owner = data.token; seat.ownerLabel = cleanName(data.label) || 'Traveler';
+          seat.connected = true; seat.relayReady = !!data.relay; seat.customName = uniqueName(seat.ownerLabel, seat.slot);
+          resetInitiative();
+        }
+      }
       if (seat) { seat.connected = true; seat.relayReady = !!data.relay; }
       conn.send({type:'room', room});
       if (room?.phase === 'game' && game) {
@@ -451,15 +462,20 @@
     const seats = activeSeats();
     const order = seats.filter(s => occupied(s) && s.roll !== null).slice().sort((a,b) => b.roll-a.roll);
     const availablePositions = availableInitiativePositions();
+    const localSeat = ownSeat(token), localNeedsRoll = !!localSeat && localSeat.roll === null;
+    const openCount = seats.filter(seat => seat.kind === 'open').length;
+    const lobbyGuide = '<div class="mp-start-path"><span class="'+(localSeat?'done':'current')+'"><b>1</b> Traveler claimed</span><span class="'+(localSeat?.roll!==null?'done':localSeat?'current':'')+'"><b>2</b> Roll starting position</span><span class="'+(roomReady()?'done':isHost?'current':'')+'"><b>3</b> Host begins</span></div>' + (localNeedsRoll?'<button class="primary mp-primary-roll" id="mpPrimaryRoll">Roll my starting position</button>':'');
     dialog.innerHTML = '<div class="eyebrow">Multiplayer lobby · ' + (isHost ? 'you are host' : 'connected guest') + '</div><h2>Choose your Traveler</h2><div class="room-code"><span>Room code</span><b>' + safe(roomCode(room.id)) + '</b><button id="mpCopyCode">Copy code</button></div>'+relayMarkup() +
+      lobbyGuide +
       '<div class="room-settings"><label>Traveler slots<select id="mpCapacity" ' + (!isHost?'disabled':'') + '>' + [1,2,3,4,5,6].map(n => '<option ' + (room.capacity===n?'selected':'') + '>'+n+'</option>').join('') + '</select></label><label>Animation pace<select id="mpSpeed" ' + (!isHost?'disabled':'') + '><option value="fast" ' + (room.speed==='fast'?'selected':'') + '>Fast</option><option value="cinematic" ' + (room.speed==='cinematic'?'selected':'') + '>Cinematic</option><option value="instant" ' + (room.speed==='instant'?'selected':'') + '>Instant</option></select></label><label>Board quality<select id="mpQuality" ' + (!isHost?'disabled':'') + '><option value="full" ' + (room.quality==='full'?'selected':'') + '>High Fidelity 60</option><option value="auto" ' + (room.quality==='auto'?'selected':'') + '>Cinematic maximum</option><option value="ultra" ' + (room.quality==='ultra'?'selected':'') + '>Performance 60+</option><option value="lite" ' + (room.quality==='lite'?'selected':'') + '>Battery saver</option></select></label><label class="mp-auto-toggle"><input type="checkbox" id="mpAutoTreasure" '+(room.autoTreasureActions?'checked':'')+' '+(!isHost?'disabled':'')+'><span>Automate Take / Give / Steal / Grand Plunder</span></label></div>' +
-      '<div class="mp-seat-list">' + seats.map(renderLobbySeat).join('') + '</div>' + (isHost ? '<div class="mp-cpu-tools"><button class="mp-fill-cpu" id="mpFillCPU">Fill open slots with CPU</button><button class="mp-all-cpu" id="mpAllCPU">Make every slot CPU</button></div>' : '') + '<div class="mp-room-footer"><div class="mp-room-status">' + (roomReady() ? (humanSeats().length ? '' : 'All-CPU spectator match ready. ') + 'Starting order locked: ' + order.map((s,i) => (i+1)+'. '+safe(s.customName)+' (position '+s.roll+')').join(' · ') : 'Pre-game roll-off: each roll permanently claims one unused position. Available: '+(availablePositions.length?availablePositions.join(', '):'none')+'. Highest position acts first; ties are impossible.') + '</div><button class="primary mp-start" id="mpStart" ' + (!isHost || !roomReady()?'disabled':'') + '>Begin the Crossing</button></div><div class="mp-alert" id="mpLobbyAlert"></div>' + engineConfigMarkup();
+      '<div class="mp-seat-list">' + seats.map(renderLobbySeat).join('') + '</div>' + (isHost ? '<div class="mp-cpu-tools"><button class="mp-fill-cpu" id="mpFillCPU">Fill open slots with CPU</button><button class="mp-all-cpu" id="mpAllCPU">Make every slot CPU</button></div>' : '') + '<div class="mp-room-footer"><div class="mp-room-status">' + (roomReady() ? (humanSeats().length ? '' : 'All-CPU spectator match ready. ') + 'Starting order locked: ' + order.map((s,i) => (i+1)+'. '+safe(s.customName)+' (position '+s.roll+')').join(' · ') : openCount ? 'Waiting for '+openCount+' more Traveler'+(openCount===1?'':'s')+'. Share the room code, or the host can fill open slots with CPU.' : 'Everyone is connected. Each human now rolls once; CPU positions lock automatically. Available: '+(availablePositions.length?availablePositions.join(', '):'none')+'.') + '</div><button class="primary mp-start" id="mpStart" ' + (!isHost || !roomReady()?'disabled':'') + '>'+(isHost?(roomReady()?'Begin the Crossing':'Complete the steps above'):'Waiting for host')+'</button></div><div class="mp-alert" id="mpLobbyAlert"></div>' + engineConfigMarkup();
     document.getElementById('mpCopyCode').onclick = async () => { try { await navigator.clipboard.writeText(roomCode(room.id)); showLobbyAlert('Room code copied.'); } catch (_) { showLobbyAlert('Room code: ' + roomCode(room.id)); } };
     document.getElementById('mpCapacity').onchange = e => lobbyAction('capacity', {value:e.target.value});
     document.getElementById('mpSpeed').onchange = e => lobbyAction('settings', {speed:e.target.value, quality:room.quality, autoTreasureActions:room.autoTreasureActions});
     document.getElementById('mpQuality').onchange = e => lobbyAction('settings', {speed:room.speed, quality:e.target.value, autoTreasureActions:room.autoTreasureActions});
     document.getElementById('mpAutoTreasure').onchange = e => lobbyAction('settings', {speed:room.speed, quality:room.quality, autoTreasureActions:e.target.checked});
     document.getElementById('mpStart').onclick = () => lobbyAction('start');
+    const primaryRoll = document.getElementById('mpPrimaryRoll'); if (primaryRoll) primaryRoll.onclick = () => lobbyAction('roll', {slot:localSeat.slot});
     if (isHost) {
       document.getElementById('mpFillCPU').onclick = () => lobbyAction('fillCPU');
       document.getElementById('mpAllCPU').onclick = () => lobbyAction('allCPU');
@@ -758,6 +774,7 @@
   window.TabokCanViewTurnRoll=localCanViewTurnRoll;
   window.TabokRoute3DHex=route3DHex;
   window.TabokRoute3DActor=route3DActor;
+  window.TabokCanRunAutomation=()=>!room||room.phase!=='game'||isHost;
   window.TabokBroadcastVisual=event=>{if(isHost&&room?.phase==='game'){broadcast({type:'visual-event',event});queueSnapshot();}};
   window.TabokMultiplayer={get room(){return room},get isHost(){return isHost},canViewActiveRoll:localCanViewTurnRoll,version:VERSION};
 })();

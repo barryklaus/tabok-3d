@@ -6,34 +6,46 @@ export function createCosmicSanctuary(scene, stoneMaps) {
   let seed = 71943;
   const random = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
   const canvas = document.createElement('canvas');
-  canvas.width = 2048; canvas.height = 1024;
+  // A single static 4K equirectangular sky stays crisp on Retina/5K displays.
+  // It costs no per-frame draw calls and mipmaps keep it inexpensive when zoomed.
+  const width = 4096, height = 2048;
+  canvas.width = width; canvas.height = height;
   const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#04050d'; ctx.fillRect(0, 0, 2048, 1024);
-  for (let i = 0; i < 240; i++) {
-    const x = random() * 2048, y = 450 + Math.sin(x * .006) * 170 + (random() - .5) * 310;
-    const radius = 45 + random() * 170;
-    const glow = ctx.createRadialGradient(x, y, 0, x, y, radius);
-    glow.addColorStop(0, i % 4 ? 'rgba(76,32,117,.12)' : 'rgba(27,91,118,.1)');
-    glow.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = glow; ctx.fillRect(x-radius, y-radius, radius*2, radius*2);
+  ctx.fillStyle = '#03040b'; ctx.fillRect(0, 0, width, height);
+  const wrappedGlow = (x,y,r,color) => {
+    for (const offset of [-width,0,width]) {
+      const px=x+offset, glow=ctx.createRadialGradient(px,y,0,px,y,r);
+      glow.addColorStop(0,color); glow.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=glow; ctx.fillRect(px-r,y-r,r*2,r*2);
+    }
+  };
+  // Layered, edge-wrapped cloudlets make the left and right sky seam invisible.
+  for (let i = 0; i < 520; i++) {
+    const x = random()*width, band=Math.sin(x/width*Math.PI*4.2)*height*.12;
+    const y = height*.49+band+(random()-.5)*height*.37, radius=90+random()*330;
+    const color=i%7===0?'rgba(31,104,132,.085)':i%3===0?'rgba(112,42,126,.105)':'rgba(61,30,105,.11)';
+    wrappedGlow(x,y,radius,color);
   }
-  for (let i = 0; i < 2300; i++) {
-    const x=random()*2048, y=random()*1024, r=random()>.985?1.5:.3+random()*.55;
-    ctx.fillStyle = `rgba(190,204,239,${.12+random()*.65})`;
+  for (let i = 0; i < 7600; i++) {
+    const x=random()*width, y=random()*height, bright=random(), r=bright>.992?2.5:bright>.94?.95:.28+random()*.48;
+    const warm=random()>.86;
+    ctx.fillStyle = warm?`rgba(244,211,157,${.16+random()*.72})`:`rgba(190,207,244,${.11+random()*.72})`;
     ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
+    if(bright>.996){ctx.fillStyle='rgba(255,241,205,.28)';ctx.fillRect(x-r*4,y-.35,r*8,.7);ctx.fillRect(x-.35,y-r*4,.7,r*8)}
   }
   // A remote accretion vortex is part of the sky, never a second game portal.
-  ctx.save();ctx.translate(1450,370);ctx.rotate(-.45);ctx.scale(1,.68);
-  for(let i=0;i<190;i++){
-    const a=random()*Math.PI*2, r=48+random()*165;
+  ctx.save();ctx.translate(width*.71,height*.36);ctx.rotate(-.45);ctx.scale(1,.68);
+  for(let i=0;i<280;i++){
+    const a=random()*Math.PI*2, r=96+random()*330;
     ctx.strokeStyle=`rgba(${220+Math.floor(random()*35)},${65+Math.floor(random()*100)},${40+Math.floor(random()*90)},${.05+random()*.17})`;
-    ctx.lineWidth=1+random()*5;ctx.beginPath();ctx.arc(0,0,r,a,a+.35+random()*.8);ctx.stroke();
+    ctx.lineWidth=2+random()*9;ctx.beginPath();ctx.arc(0,0,r,a,a+.35+random()*.8);ctx.stroke();
   }
-  const halo=ctx.createRadialGradient(0,0,38,0,0,110);
+  const halo=ctx.createRadialGradient(0,0,76,0,0,220);
   halo.addColorStop(0,'#fff0b8');halo.addColorStop(.12,'#f9a35c');halo.addColorStop(.28,'rgba(218,83,48,.55)');halo.addColorStop(1,'rgba(45,12,40,0)');
-  ctx.fillStyle=halo;ctx.beginPath();ctx.arc(0,0,110,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#030309';ctx.beginPath();ctx.arc(0,0,39,0,Math.PI*2);ctx.fill();ctx.restore();
+  ctx.fillStyle=halo;ctx.beginPath();ctx.arc(0,0,220,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#030309';ctx.beginPath();ctx.arc(0,0,78,0,Math.PI*2);ctx.fill();ctx.restore();
   const sky=new THREE.CanvasTexture(canvas);sky.mapping=THREE.EquirectangularReflectionMapping;sky.colorSpace=THREE.SRGBColorSpace;
+  sky.minFilter=THREE.LinearMipmapLinearFilter;sky.magFilter=THREE.LinearFilter;sky.generateMipmaps=true;
   scene.background=sky;scene.backgroundIntensity=.7;
   const root=new THREE.Group();root.name='Cosmic sanctuary surrounds';scene.add(root);
   const stone=new THREE.MeshStandardMaterial({map:stoneMaps.map,bumpMap:stoneMaps.bump,bumpScale:.08,color:0x91858b,roughness:.96,metalness:0});
