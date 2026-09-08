@@ -198,3 +198,20 @@ test('Starpath removes replay, resolves automation authoritatively, shortens Por
  assert.match(cosmic,/for \(const offset of \[-width,0,width\]\)/);
  assert.match(cosmic,/LinearMipmapLinearFilter/);
 });
+
+test('Gilded Fate uses reference-matched treasure art and engraved symbol dice',()=>{
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ const dice=fs.readFileSync(path.join(root,'true3d-dice.js'),'utf8');
+ for(const name of ['relic','oddity','keepsake']){
+  const asset=`assets/treasure-${name}-gilded-v1.png`;
+  assert.match(html,new RegExp(asset.replaceAll('.','\\.')));
+  assert.ok(fs.existsSync(path.join(root,asset)),`${name} production icon must exist`);
+ }
+ assert.match(html,/v0\.60\.0 GILDED FATE/);
+ assert.match(dice,/Celestial face plate/);
+ assert.match(dice,/new Path2D\('M86 28H426/);
+ assert.match(dice,/context\.fillText\(String\(value\),256,264\)/);
+ assert.match(dice,/const treasureChest=/);
+ assert.match(dice,/const hood=/);
+ assert.match(dice,/faceTexture\(label, kind, faceIndex\)/);
+});

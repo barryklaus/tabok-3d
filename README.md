@@ -1,6 +1,6 @@
 # TABOK — True 3D Board Alpha
 
-Version: **v0.59.0 — Starpath · 2026.09.08.B2**
+Version: **v0.60.0 — Gilded Fate · 2026.09.08.C1**
 
 Starpath removes Replay Last Moment, lets a Traveler enter the Portal as soon
 as any legal route reaches it within the remaining movement, and makes automatic

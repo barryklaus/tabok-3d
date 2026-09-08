@@ -12,22 +12,22 @@ const FACE_SETS = {
   Rune: ['×2', '×3', 'SWAP', 'PLUNDER', 'RIFT', 'WILD']
 };
 
-function faceTexture(label, kind) {
+function faceTexture(label, kind, faceIndex = 0) {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = 512;
   const context = canvas.getContext('2d');
   const movement = kind === 'Movement';
   const rune = kind === 'Rune';
-  const glow = movement ? '#ffb52f' : rune ? '#55e8ff' : '#b248ff';
-  const glowLight = movement ? '#fff0a0' : rune ? '#d9fbff' : '#f2b9ff';
-  const metal = movement ? '#8d7045' : rune ? '#685b82' : '#705a48';
+  const glow = movement ? '#e9a942' : rune ? '#8e65db' : '#e1a94e';
+  const glowLight = movement ? '#ffe3a0' : rune ? '#e5d5ff' : '#ffe2a1';
+  const metal = rune ? '#8c6cab' : '#9b7138';
 
   // Flat, worn ruin stone matching the board. Energy belongs to the result,
   // not to the body of a die that is still tumbling.
-  const base = context.createRadialGradient(170, 125, 20, 256, 256, 360);
-  base.addColorStop(0, movement ? '#4a4136' : rune ? '#313747' : '#3f3544');
-  base.addColorStop(.48, movement ? '#39332c' : rune ? '#272c37' : '#322b35');
-  base.addColorStop(1, movement ? '#25221e' : rune ? '#1b1e25' : '#221d24');
+  const base = context.createRadialGradient(172, 118, 18, 256, 256, 370);
+  base.addColorStop(0, rune ? '#21192b' : '#211b16');
+  base.addColorStop(.42, rune ? '#130f1c' : '#120f0c');
+  base.addColorStop(1, '#050505');
   context.fillStyle = base; context.fillRect(0, 0, 512, 512);
 
   // Fine stone grain and non-emissive fractures.
@@ -46,14 +46,25 @@ function faceTexture(label, kind) {
   }
   context.restore();
 
-  // Double metallic filigree frame.
-  context.lineJoin = 'round'; context.strokeStyle = metal; context.shadowBlur = 0; context.lineWidth = 15;
-  context.strokeRect(30, 30, 452, 452); context.lineWidth = 3; context.strokeStyle = 'rgba(205,190,164,.32)'; context.strokeRect(55, 55, 402, 402);
+  // Celestial face plate: clipped gold frame, inset medallion and precision marks.
+  context.lineJoin = 'round'; context.shadowBlur = 0;
+  const outerPlate = new Path2D('M86 28H426L484 86V426L426 484H86L28 426V86Z');
+  context.strokeStyle = metal; context.lineWidth = 15; context.stroke(outerPlate);
+  context.strokeStyle = 'rgba(224,176,92,.48)'; context.lineWidth = 3;
+  context.stroke(new Path2D('M92 49H420L463 92V420L420 463H92L49 420V92Z'));
   context.strokeStyle = 'rgba(189,170,140,.4)'; context.lineWidth = 3;
   [[72,72,1,1],[440,72,-1,1],[72,440,1,-1],[440,440,-1,-1]].forEach(([x,y,sx,sy]) => {
     context.beginPath(); context.moveTo(x, y + sy * 54); context.quadraticCurveTo(x, y, x + sx * 54, y); context.stroke();
     context.beginPath(); context.moveTo(x + sx * 17, y + sy * 17); context.lineTo(x + sx * 34, y + sy * 34); context.stroke();
   });
+  context.beginPath(); context.arc(256,256,151,0,Math.PI*2); context.strokeStyle='rgba(159,113,51,.72)'; context.lineWidth=5; context.stroke();
+  context.beginPath(); context.arc(256,256,127,0,Math.PI*2); context.strokeStyle='rgba(218,166,77,.38)'; context.lineWidth=2; context.stroke();
+  for(let tick=0;tick<12;tick++){
+    const angle=tick*Math.PI/6,inner=tick%3===0?132:139,outer=147;
+    context.beginPath();context.moveTo(256+Math.cos(angle)*inner,256+Math.sin(angle)*inner);context.lineTo(256+Math.cos(angle)*outer,256+Math.sin(angle)*outer);context.strokeStyle='rgba(216,163,76,.7)';context.lineWidth=tick%3===0?4:2;context.stroke();
+  }
+  const diamond=(x,y,size=8)=>{context.beginPath();context.moveTo(x,y-size);context.lineTo(x+size,y);context.lineTo(x,y+size);context.lineTo(x-size,y);context.closePath();context.strokeStyle='rgba(218,166,77,.78)';context.lineWidth=3;context.stroke()};
+  [[256,70],[442,256],[256,442],[70,256]].forEach(([x,y])=>diamond(x,y,8));
 
   const orb = (x, y, radius = 46) => {
     context.save(); context.shadowBlur = 0;
@@ -66,35 +77,28 @@ function faceTexture(label, kind) {
   };
 
   const drawMovement = value => {
-    const positions = value === 1 ? [[256,256]] : value === 2 ? [[178,178],[334,334]] : [[166,166],[256,256],[346,346]];
-    positions.forEach(([x,y]) => orb(x,y,value === 3 ? 42 : 49));
+    context.save(); context.fillStyle=glowLight; context.shadowColor=glow; context.shadowBlur=10;
+    context.font='112px Georgia, "Times New Roman", serif';context.textAlign='center';context.textBaseline='middle';
+    context.fillText(String(value),256,264);context.restore();
   };
-  const symbolStroke = () => { context.strokeStyle = glowLight; context.lineWidth = 18; context.lineCap = 'round'; context.lineJoin = 'round'; context.shadowBlur = 0; };
+  const symbolStroke = () => { context.strokeStyle = glowLight; context.fillStyle=glowLight; context.lineWidth = 15; context.lineCap = 'round'; context.lineJoin = 'round'; context.shadowColor=glow; context.shadowBlur = 10; };
   const arrowHead = (x, y, angle) => {
     const length = 29, spread = .62; context.beginPath();
     context.moveTo(x - Math.cos(angle - spread) * length, y - Math.sin(angle - spread) * length); context.lineTo(x, y);
     context.lineTo(x - Math.cos(angle + spread) * length, y - Math.sin(angle + spread) * length); context.stroke();
   };
+  const sparkle = (x,y,r=18) => {context.beginPath();context.moveTo(x,y-r);context.quadraticCurveTo(x+5,y-5,x+r,y);context.quadraticCurveTo(x+5,y+5,x,y+r);context.quadraticCurveTo(x-5,y+5,x-r,y);context.quadraticCurveTo(x-5,y-5,x,y-r);context.closePath();context.fill()};
+  const palm = (flip=false) => {context.save();if(flip){context.translate(512,0);context.scale(-1,1)}context.beginPath();context.moveTo(133,293);context.quadraticCurveTo(184,276,222,288);context.lineTo(276,309);context.quadraticCurveTo(299,318,318,302);context.lineTo(352,272);context.quadraticCurveTo(365,258,379,272);context.quadraticCurveTo(385,281,374,293);context.lineTo(326,348);context.quadraticCurveTo(301,374,261,365);context.lineTo(177,343);context.lineTo(133,343);context.stroke();context.restore()};
+  const treasureChest=()=>{context.save();context.lineWidth=13;context.strokeRect(190,207,132,92);context.beginPath();context.moveTo(190,242);context.lineTo(322,242);context.moveTo(256,242);context.lineTo(256,270);context.stroke();context.beginPath();context.arc(256,207,66,Math.PI,0);context.stroke();context.restore()};
+  const hood=()=>{context.save();context.beginPath();context.moveTo(256,144);context.quadraticCurveTo(174,159,171,260);context.quadraticCurveTo(180,348,256,370);context.quadraticCurveTo(332,348,341,260);context.quadraticCurveTo(338,159,256,144);context.closePath();context.stroke();context.beginPath();context.moveTo(208,262);context.quadraticCurveTo(229,244,248,266);context.moveTo(304,262);context.quadraticCurveTo(283,244,264,266);context.stroke();context.restore()};
   const drawAction = action => {
-    context.save(); symbolStroke(); orb(256,256,34);
+    context.save(); symbolStroke();
     if (action === 'TAKE') {
-      // Three converging paths: the world is drawn into the Traveler's keeping.
-      [[256,112,Math.PI/2],[128,342,-.48],[384,342,Math.PI+.48]].forEach(([x,y,a]) => {
-        const tx = 256 + Math.cos(a) * -64, ty = 256 + Math.sin(a) * -64;
-        context.beginPath(); context.moveTo(x,y); context.lineTo(tx,ty); context.stroke(); arrowHead(tx,ty,a);
-      });
+      if(faceIndex%2===0){palm();sparkle(266,197,27)}else{treasureChest();sparkle(348,169,14)}
     } else if (action === 'GIVE') {
-      // Three radiating paths: the held treasure is offered outward.
-      [[256,112,-Math.PI/2],[128,342,Math.PI-.48],[384,342,.48]].forEach(([x,y,a]) => {
-        const sx = 256 + Math.cos(a) * 64, sy = 256 + Math.sin(a) * 64;
-        context.beginPath(); context.moveTo(sx,sy); context.lineTo(x,y); context.stroke(); arrowHead(x,y,a);
-      });
+      palm(faceIndex%2===0);context.beginPath();context.moveTo(256,181);context.lineTo(220,230);context.lineTo(292,230);context.closePath();context.fill();sparkle(faceIndex%2===0?350:162,185,12);
     } else {
-      // A hooked spectral claw closes around the central treasure.
-      context.beginPath(); context.arc(256,256,122,-1.2,1.2); context.stroke();
-      context.beginPath(); context.arc(256,256,122,Math.PI-1.2,Math.PI+1.2); context.stroke();
-      [[177,164,-.72],[335,164,-2.42],[177,348,.72],[335,348,2.42]].forEach(([x,y,a]) => arrowHead(x,y,a));
-      context.strokeStyle = metal; context.lineWidth = 5; context.beginPath(); context.arc(256,256,155,0,Math.PI*2); context.stroke();
+      if(faceIndex%2===0){context.beginPath();context.arc(247,258,105,-.6,Math.PI*1.42);context.stroke();arrowHead(334,200,-.35);palm(true)}else{hood()}
     }
     context.restore();
   };
@@ -189,11 +193,11 @@ export class TabokDice3D {
 
   buildDice(kind, x) {
     const labels = FACE_SETS[kind];
-    const materials = labels.map(label => {
-      const {texture,emissiveMap} = faceTexture(label, kind);
+    const materials = labels.map((label, faceIndex) => {
+      const {texture,emissiveMap} = faceTexture(label, kind, faceIndex);
       return new THREE.MeshStandardMaterial({
         map: texture, emissiveMap, emissive:0x000000, emissiveIntensity:0, bumpMap: texture, bumpScale: .026,
-        color: 0xffffff, roughness: .86, metalness: .08
+        color: 0xffffff, roughness: .62, metalness: .22
       });
     });
     const die = new THREE.Mesh(new RoundedBoxGeometry(2.05, 2.05, 2.05, 5, .24), materials);
