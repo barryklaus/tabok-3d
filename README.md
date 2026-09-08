@@ -1,6 +1,11 @@
 # TABOK — True 3D Board Alpha
 
-Version: **v0.57.0 — Decision Altar · 2026.09.08.A1**
+Version: **v0.57.1 — Free Camera · 2026.09.08.A2**
+
+Free Camera restores conventional desktop controls: hold the left mouse button
+and drag to orbit, hold the right mouse button and drag to pan the camera and
+its orbit target freely, and use the wheel to zoom. Simple left-clicks still
+select legal hexes and board actors; clicking no longer changes the camera axis.
 
 Decision Altar moves TAKE, GIVE, STEAL, Grand Plunder, Wild Surge, Riftwalk,
 and Soul Exchange choices into one focused lower-center presentation shared by
@@ -13,7 +18,7 @@ two-handed adjacent execution/grab animation before Answer-or-Die resolves.
 
 Cosmic surroundings revision C1 adds a baked nebula/star background with a distant orange vortex, twelve ruined perimeter pillars, and drifting instanced rock fragments. No additional lights or shadow passes are introduced. Rocks update at 24 Hz (12 Hz and 36 fragments in Ultra); reduced-motion mode keeps them stationary. This is a procedural interpretation of the reference, not a reproduction of its illustrated scenery. Device frame rate still needs measurement in gameplay.
 
-Ruin Focus makes Grand Plunder a single-target tactical action with an automatic fast volley, adds click-to-orbit focus for hexes and every board actor, grounds Traveler movement in walk/run locomotion, gives Minor summons a faster heavy landing, expands Answer-or-Die readability, and introduces worn ruin-stone dice whose result marks alone ignite.
+Ruin Focus makes Grand Plunder a single-target tactical action with an automatic fast volley, grounds Traveler movement in walk/run locomotion, gives Minor summons a faster heavy landing, expands Answer-or-Die readability, and introduces worn ruin-stone dice whose result marks alone ignite.
 
 ## Fractured Sanctuary board art
 

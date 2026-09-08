@@ -130,7 +130,7 @@
 </head>
 <body>
   <div class="shell">
-    <header class="top"><div class="brand"><strong>TABOK</strong><span>The Crossing · True 3D Board</span><small class="build-label">v0.57.0 DECISION ALTAR · Build 2026.09.08.A1</small></div><small class="perf-meter" id="perfMeter" title="Live animation frame rate">FPS —</small><div class="network-pill" id="networkPill">OFFLINE</div><div class="top-status"><b id="roundTop">New expedition</b><span id="phaseTop" class="webgl-status">Raising the 3D ruins…</span></div><button class="new-game" id="newGame">Room</button></header>
+    <header class="top"><div class="brand"><strong>TABOK</strong><span>The Crossing · True 3D Board</span><small class="build-label">v0.57.1 FREE CAMERA · Build 2026.09.08.A2</small></div><small class="perf-meter" id="perfMeter" title="Live animation frame rate">FPS —</small><div class="network-pill" id="networkPill">OFFLINE</div><div class="top-status"><b id="roundTop">New expedition</b><span id="phaseTop" class="webgl-status">Raising the 3D ruins…</span></div><button class="new-game" id="newGame">Room</button></header>
     <main class="layout">
       <aside class="guide" aria-label="How to play TABOK">
         <div class="character-preview" id="characterPreview"><div class="preview-caption"><strong>Choose a Traveler</strong><span>12-frame idle preview</span></div></div>
@@ -393,7 +393,7 @@
     async function initGPUBoard(){
       const status=document.getElementById('phaseTop');
       try{
-        const{TabokTrue3DBoard}=await import('./true3d-board.js?v=20260908A1'),cells3D=[];
+        const{TabokTrue3DBoard}=await import('./true3d-board.js?v=20260908A2'),cells3D=[];
         Object.entries(COLUMNS).forEach(([qValue,col])=>{const q=Number(qValue);[...col.cells].forEach((type,i)=>cells3D.push({q,r:col.r0+i,type}))});
         webglBoard=new TabokTrue3DBoard(document.getElementById('webglBoard'),{
           cells:cells3D,
@@ -407,7 +407,10 @@
         buttons.className='true3d-hud-buttons';left.type=right.type='button';left.id='orbit3DLeft';right.id='orbit3DRight';left.textContent='↶';right.textContent='↷';left.title='Rotate camera left';right.title='Rotate camera right';reset.before(left);reset.after(right);reset.parentElement.classList.add('true3d-hud-controls');
         reset.onclick=()=>webglBoard.resetCamera();left.onclick=()=>webglBoard.orbitCamera(-1);right.onclick=()=>webglBoard.orbitCamera(1);
         try{const{TabokDice3D}=await import('./true3d-dice.js?v=20260907I1');dice3D=new TabokDice3D(els.turnRollDice)}catch(diceError){console.warn('TABOK physical dice unavailable; using the flat dice fallback.',diceError)}
-        status.textContent='True 3D ruins ready · drag to orbit';
+        const cameraCanvas=document.getElementById('webglBoard'),cameraHelp=document.querySelector('.true3d-hud>span');
+        cameraCanvas.setAttribute('aria-label','Interactive 3D TABOK board. Hold left mouse and drag to orbit. Hold right mouse and drag to move the camera. Use the wheel or pinch to zoom.');
+        if(cameraHelp)cameraHelp.innerHTML='<b>3D CAMERA</b> Left-drag to orbit · Right-drag to move · Wheel/pinch to zoom';
+        status.textContent='True 3D ruins ready · left orbit · right move';
         syncTrue3DBoard();
       }catch(error){
         console.warn('TABOK true 3D initialization failed; using the 2D compatibility board.',error);

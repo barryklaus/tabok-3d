@@ -150,6 +150,17 @@ test('Decision Altar synchronizes choices, actor clicks and Sovereign execution'
  assert.match(cinematics,/summonSpin=major&&!this\.reduced/);
 });
 
+test('Free Camera uses left orbit and right pan without click-to-focus',()=>{
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ const board=fs.readFileSync(path.join(root,'true3d-board.js'),'utf8');
+ assert.match(board,/controls\.enablePan = true/);
+ assert.match(board,/mouseButtons\.LEFT = THREE\.MOUSE\.ROTATE/);
+ assert.match(board,/mouseButtons\.RIGHT = THREE\.MOUSE\.PAN/);
+ assert.match(board,/touches\.TWO = THREE\.TOUCH\.DOLLY_PAN/);
+ assert.doesNotMatch(board,/this\.focusOn\(actorId \|\| id, hit\.point\)/);
+ assert.match(html,/Left-drag to orbit · Right-drag to move/);
+});
+
 test('Correction pass adds heart feedback, Major reroll and delayed carried verdict',()=>{
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  const board=fs.readFileSync(path.join(root,'true3d-board.js'),'utf8');

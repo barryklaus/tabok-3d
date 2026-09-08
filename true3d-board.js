@@ -371,7 +371,9 @@ export class TabokTrue3DBoard {
     this.controls.enableRotate = true;
     this.controls.enableDamping = true;
     this.controls.dampingFactor = .075;
-    this.controls.enablePan = false;
+    this.controls.enablePan = true;
+    this.controls.screenSpacePanning = false;
+    this.controls.panSpeed = .72;
     this.controls.minDistance = 10;
     this.controls.maxDistance = 38;
     this.controls.minPolarAngle = .28;
@@ -380,9 +382,9 @@ export class TabokTrue3DBoard {
     this.controls.zoomSpeed = .8;
     this.controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
     this.controls.mouseButtons.MIDDLE = THREE.MOUSE.DOLLY;
-    this.controls.mouseButtons.RIGHT = THREE.MOUSE.ROTATE;
+    this.controls.mouseButtons.RIGHT = THREE.MOUSE.PAN;
     this.controls.touches.ONE = THREE.TOUCH.ROTATE;
-    this.controls.touches.TWO = THREE.TOUCH.DOLLY_ROTATE;
+    this.controls.touches.TWO = THREE.TOUCH.DOLLY_PAN;
     this.canvas.tabIndex = 0;
     this.canvas.style.touchAction = 'none';
     this.canvas.addEventListener('contextmenu', event => event.preventDefault());
@@ -789,7 +791,7 @@ export class TabokTrue3DBoard {
   bindInput() {
     this.raycaster = new THREE.Raycaster();
     this.pointer = new THREE.Vector2();
-    this.canvas.addEventListener('pointerdown', event => { this.pointerStart = { x: event.clientX, y: event.clientY }; });
+    this.canvas.addEventListener('pointerdown', event => { this.pointerStart = { x: event.clientX, y: event.clientY, button: event.button }; });
     this.canvas.addEventListener('pointermove', event => {
       if (this.pointerStart && Math.hypot(event.clientX - this.pointerStart.x, event.clientY - this.pointerStart.y) > 5) return;
       const hit = this.pick(event);
@@ -808,11 +810,10 @@ export class TabokTrue3DBoard {
     this.canvas.addEventListener('pointerup', event => {
       const start = this.pointerStart;
       this.pointerStart = null;
-      if (!start || Math.hypot(event.clientX - start.x, event.clientY - start.y) > 5) return;
+      if (!start || start.button !== 0 || event.button !== 0 || Math.hypot(event.clientX - start.x, event.clientY - start.y) > 5) return;
       const hit = this.pick(event);
       if (!hit) return;
       const id = this.idForHit(hit), actorId = this.actorIdForHit(hit);
-      this.focusOn(actorId || id, hit.point);
       if (actorId) this.config.onActor?.(actorId);
       else if (id === 'PORTAL') this.config.onPortal?.();
       else if (id) this.config.onHex?.(id);
