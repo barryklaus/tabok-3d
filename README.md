@@ -1,6 +1,15 @@
 # TABOK — True 3D Board Alpha
 
-Version: **v0.56.0 — Ruin Focus · 2026.09.07.I1**
+Version: **v0.57.0 — Decision Altar · 2026.09.08.A1**
+
+Decision Altar moves TAKE, GIVE, STEAL, Grand Plunder, Wild Surge, Riftwalk,
+and Soul Exchange choices into one focused lower-center presentation shared by
+the multiplayer UI. Soul Exchange and Grand Plunder also accept direct clicks
+on eligible 3D Travelers. Hosts can enable automatic TAKE/GIVE/STEAL/Grand
+Plunder resolution in the room setup; the preference is synchronized with the
+whole room. Traveler hover cards now show both inventory and four-heart health.
+The Ruin Sovereign spirals out of the Portal during its summon and uses a new
+two-handed adjacent execution/grab animation before Answer-or-Die resolves.
 
 Cosmic surroundings revision C1 adds a baked nebula/star background with a distant orange vortex, twelve ruined perimeter pillars, and drifting instanced rock fragments. No additional lights or shadow passes are introduced. Rocks update at 24 Hz (12 Hz and 36 fragments in Ultra); reduced-motion mode keeps them stationary. This is a procedural interpretation of the reference, not a reproduction of its illustrated scenery. Device frame rate still needs measurement in gameplay.
 

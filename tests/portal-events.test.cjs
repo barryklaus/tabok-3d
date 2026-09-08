@@ -122,7 +122,7 @@ test('Grounded Legends removes plinths, faces travel and shares character speech
  assert.match(board,/\(major \? \.26 : 0\) - bounds\.min\.y/);
  assert.match(board,/const atEntrance=actor\.kind==='player'&&actor\.start&&actor\.pos===actor\.start/);
  assert.match(board,/targetHeading=Math\.atan2\(dx,dz\)/);
- assert.match(board,/const quiet=\['walk','walk','crouch','jump'\],far=\['run','run','acro'\]/);
+ assert.match(board,/movementMode=journeyLength>=3\?'run':'walk'/);
  assert.ok(!board.includes("'slide'"));
  assert.match(travelers,/\['move','walk','run','crouch','jump','acro'\]/);
  assert.match(monsters,/mode==='move'\|\|mode==='walk'/);
@@ -131,6 +131,23 @@ test('Grounded Legends removes plinths, faces travel and shares character speech
  assert.match(cinematics,/board\.showActorSpeech\?\./);
  assert.match(cinematics,/eventPhrase\(event,event\.type==='crossing'\?CROSSING_TALKS:REJECTION_TALKS\)/);
  assert.match(html,/journeyLength:route\.length/);
+});
+
+test('Decision Altar synchronizes choices, actor clicks and Sovereign execution',()=>{
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ const multiplayer=fs.readFileSync(path.join(root,'multiplayer.js'),'utf8');
+ const board=fs.readFileSync(path.join(root,'true3d-board.js'),'utf8');
+ const monsters=fs.readFileSync(path.join(root,'sculpted-monsters.js'),'utf8');
+ const cinematics=fs.readFileSync(path.join(root,'portal-cinematics.js'),'utf8');
+ assert.match(html,/id="actionDecisionOverlay"/);
+ assert.match(html,/Automate treasure actions/);
+ assert.match(html,/window\.TabokSelect3DActor=select3DActor/);
+ assert.match(html,/actor-tooltip-health/);
+ assert.match(multiplayer,/window\.TabokRoute3DActor=route3DActor/);
+ assert.match(multiplayer,/autoTreasureActions/);
+ assert.match(board,/playMajorKill\(targetId/);
+ assert.match(monsters,/execution=mode==='kill'/);
+ assert.match(cinematics,/summonSpin=major&&!this\.reduced/);
 });
 
 test('Correction pass adds heart feedback, Major reroll and delayed carried verdict',()=>{

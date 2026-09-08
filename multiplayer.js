@@ -103,7 +103,7 @@
   }
 
   function engineConfigMarkup() {
-    return '<div id="mpEngineConfig" hidden><select id="playerCount"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option selected>6</option></select><input id="monsterLimit" value="3 Monsters"><select id="animationSpeed"><option value="fast" selected>Fast</option><option value="cinematic">Cinematic</option><option value="instant">Instant</option></select><select id="visualQuality"><option value="ultra" selected>Ultra</option><option value="auto">Auto</option><option value="full">Full</option><option value="lite">Lite</option></select><div id="seatSetup"></div><button id="startGame"></button></div>';
+    return '<div id="mpEngineConfig" hidden><select id="playerCount"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option selected>6</option></select><input id="monsterLimit" value="3 Monsters"><select id="animationSpeed"><option value="fast" selected>Fast</option><option value="cinematic">Cinematic</option><option value="instant">Instant</option></select><select id="visualQuality"><option value="ultra" selected>Ultra</option><option value="auto">Auto</option><option value="full">Full</option><option value="lite">Lite</option></select><input type="checkbox" id="autoTreasureActions"><div id="seatSetup"></div><button id="startGame"></button></div>';
   }
 
   function renderLanding(message = '') {
@@ -133,7 +133,7 @@
 
   function newRoom(id) {
     return {
-      id, phase:'lobby', capacity:6, speed:'fast', quality:'full', hostToken:token, rolling:null,
+      id, phase:'lobby', capacity:6, speed:'fast', quality:'full', autoTreasureActions:false, hostToken:token, rolling:null,
       seats: PLAYER_DATA.map((data, i) => ({slot:data[0], kind:'open', owner:null, ownerLabel:'', connected:false, charId:CHARACTERS[i].id, customName:CHARACTERS[i].name, roll:null})),
       chat:[{system:true, text:'The room is open. Claim a Traveler or let the host summon CPU companions.'}]
     };
@@ -277,6 +277,7 @@
   function ownerConnected(owner) { return owner === token ? true : connections.has(owner); }
   function normalizeRoom() {
     if (!room?.seats) return;
+    if (typeof room.autoTreasureActions !== 'boolean') room.autoTreasureActions = false;
     room.seats.forEach(seat => { if (!seat.kind) seat.kind = seat.owner ? 'human' : 'open'; });
   }
   function occupied(seat) { return seat?.kind === 'human' || seat?.kind === 'cpu'; }
@@ -297,6 +298,7 @@
     } else if (action === 'settings' && sender === room.hostToken) {
       if (['fast','cinematic','instant'].includes(payload.speed)) room.speed = payload.speed;
       if (['ultra','auto','full','lite'].includes(payload.quality)) room.quality = payload.quality;
+      if (typeof payload.autoTreasureActions === 'boolean') room.autoTreasureActions = payload.autoTreasureActions;
     } else if (action === 'claim') {
       const seat = seatForSlot(payload.slot);
       if (!seat || room.seats.indexOf(seat) >= room.capacity) return;
@@ -450,12 +452,13 @@
     const order = seats.filter(s => occupied(s) && s.roll !== null).slice().sort((a,b) => b.roll-a.roll);
     const availablePositions = availableInitiativePositions();
     dialog.innerHTML = '<div class="eyebrow">Multiplayer lobby · ' + (isHost ? 'you are host' : 'connected guest') + '</div><h2>Choose your Traveler</h2><div class="room-code"><span>Room code</span><b>' + safe(roomCode(room.id)) + '</b><button id="mpCopyCode">Copy code</button></div>'+relayMarkup() +
-      '<div class="room-settings"><label>Traveler slots<select id="mpCapacity" ' + (!isHost?'disabled':'') + '>' + [1,2,3,4,5,6].map(n => '<option ' + (room.capacity===n?'selected':'') + '>'+n+'</option>').join('') + '</select></label><label>Animation pace<select id="mpSpeed" ' + (!isHost?'disabled':'') + '><option value="fast" ' + (room.speed==='fast'?'selected':'') + '>Fast</option><option value="cinematic" ' + (room.speed==='cinematic'?'selected':'') + '>Cinematic</option><option value="instant" ' + (room.speed==='instant'?'selected':'') + '>Instant</option></select></label><label>Board quality<select id="mpQuality" ' + (!isHost?'disabled':'') + '><option value="full" ' + (room.quality==='full'?'selected':'') + '>High Fidelity 60</option><option value="auto" ' + (room.quality==='auto'?'selected':'') + '>Cinematic maximum</option><option value="ultra" ' + (room.quality==='ultra'?'selected':'') + '>Performance 60+</option><option value="lite" ' + (room.quality==='lite'?'selected':'') + '>Battery saver</option></select></label></div>' +
+      '<div class="room-settings"><label>Traveler slots<select id="mpCapacity" ' + (!isHost?'disabled':'') + '>' + [1,2,3,4,5,6].map(n => '<option ' + (room.capacity===n?'selected':'') + '>'+n+'</option>').join('') + '</select></label><label>Animation pace<select id="mpSpeed" ' + (!isHost?'disabled':'') + '><option value="fast" ' + (room.speed==='fast'?'selected':'') + '>Fast</option><option value="cinematic" ' + (room.speed==='cinematic'?'selected':'') + '>Cinematic</option><option value="instant" ' + (room.speed==='instant'?'selected':'') + '>Instant</option></select></label><label>Board quality<select id="mpQuality" ' + (!isHost?'disabled':'') + '><option value="full" ' + (room.quality==='full'?'selected':'') + '>High Fidelity 60</option><option value="auto" ' + (room.quality==='auto'?'selected':'') + '>Cinematic maximum</option><option value="ultra" ' + (room.quality==='ultra'?'selected':'') + '>Performance 60+</option><option value="lite" ' + (room.quality==='lite'?'selected':'') + '>Battery saver</option></select></label><label class="mp-auto-toggle"><input type="checkbox" id="mpAutoTreasure" '+(room.autoTreasureActions?'checked':'')+' '+(!isHost?'disabled':'')+'><span>Automate Take / Give / Steal / Grand Plunder</span></label></div>' +
       '<div class="mp-seat-list">' + seats.map(renderLobbySeat).join('') + '</div>' + (isHost ? '<div class="mp-cpu-tools"><button class="mp-fill-cpu" id="mpFillCPU">Fill open slots with CPU</button><button class="mp-all-cpu" id="mpAllCPU">Make every slot CPU</button></div>' : '') + '<div class="mp-room-footer"><div class="mp-room-status">' + (roomReady() ? (humanSeats().length ? '' : 'All-CPU spectator match ready. ') + 'Starting order locked: ' + order.map((s,i) => (i+1)+'. '+safe(s.customName)+' (position '+s.roll+')').join(' · ') : 'Pre-game roll-off: each roll permanently claims one unused position. Available: '+(availablePositions.length?availablePositions.join(', '):'none')+'. Highest position acts first; ties are impossible.') + '</div><button class="primary mp-start" id="mpStart" ' + (!isHost || !roomReady()?'disabled':'') + '>Begin the Crossing</button></div><div class="mp-alert" id="mpLobbyAlert"></div>' + engineConfigMarkup();
     document.getElementById('mpCopyCode').onclick = async () => { try { await navigator.clipboard.writeText(roomCode(room.id)); showLobbyAlert('Room code copied.'); } catch (_) { showLobbyAlert('Room code: ' + roomCode(room.id)); } };
     document.getElementById('mpCapacity').onchange = e => lobbyAction('capacity', {value:e.target.value});
-    document.getElementById('mpSpeed').onchange = e => lobbyAction('settings', {speed:e.target.value, quality:room.quality});
-    document.getElementById('mpQuality').onchange = e => lobbyAction('settings', {speed:room.speed, quality:e.target.value});
+    document.getElementById('mpSpeed').onchange = e => lobbyAction('settings', {speed:e.target.value, quality:room.quality, autoTreasureActions:room.autoTreasureActions});
+    document.getElementById('mpQuality').onchange = e => lobbyAction('settings', {speed:room.speed, quality:e.target.value, autoTreasureActions:room.autoTreasureActions});
+    document.getElementById('mpAutoTreasure').onchange = e => lobbyAction('settings', {speed:room.speed, quality:room.quality, autoTreasureActions:e.target.checked});
     document.getElementById('mpStart').onclick = () => lobbyAction('start');
     if (isHost) {
       document.getElementById('mpFillCPU').onclick = () => lobbyAction('fillCPU');
@@ -538,6 +541,7 @@
     document.getElementById('playerCount').value = String(room.capacity);
     document.getElementById('animationSpeed').value = room.speed;
     document.getElementById('visualQuality').value = room.quality;
+    document.getElementById('autoTreasureActions').checked = !!room.autoTreasureActions;
     renderSeatSetup();
     activeSeats().forEach((seat,i) => {
       const charSelect = document.querySelectorAll('.character-choice')[i];
@@ -600,7 +604,7 @@
 
   function captureUI() {
     return {
-      eye:els.eye.textContent,title:els.title.textContent,instruction:els.instruction.textContent,dice:els.dice.innerHTML,controls:els.controls.innerHTML,event:els.event.textContent,portalState:els.portal.querySelector('.eclipse-well')?.dataset.state||'idle',
+      eye:els.eye.textContent,title:els.title.textContent,instruction:els.instruction.textContent,dice:els.dice.innerHTML,controls:els.controls.innerHTML,event:els.event.textContent,portalState:els.portal.querySelector('.eclipse-well')?.dataset.state||'idle',actionDecision:{className:els.actionDecision.className,body:els.actionDecisionBody.innerHTML,kicker:els.actionDecision.querySelector('.action-decision-kicker').textContent},
       turnRoll:{className:els.turnRoll.className,style:els.turnRoll.getAttribute('style')||'',portraitStyle:els.turnRollPortrait.getAttribute('style')||'',kicker:els.turnRollKicker.textContent,name:els.turnRollName.textContent,role:els.turnRollRole.textContent,status:els.turnRollStatus.textContent,dice:els.turnRollDice.innerHTML,control:els.turnRollControl.innerHTML},
       message:{className:els.message.className,eye:els.messageEye.textContent,title:els.messageTitle.textContent,body:els.messageBody.innerHTML,continueText:els.messageContinue.textContent,continueHidden:els.messageContinue.hidden,input:document.getElementById('lastBreathInput')?.value || ''}
     };
@@ -610,6 +614,7 @@
     applyingRemote = true;
     els.eye.textContent=ui.eye; els.title.textContent=ui.title; els.instruction.textContent=ui.instruction; els.dice.innerHTML=ui.dice; els.controls.innerHTML=ui.controls; els.event.textContent=ui.event; const portalState=ui.portalState||'idle',portal=els.portal.querySelector('.eclipse-well'); if(portal) portal.dataset.state=portalState; webglBoard?.setPortalState(portalState);
     if(ui.turnRoll){els.turnRoll.className=ui.turnRoll.className;els.turnRoll.setAttribute('style',ui.turnRoll.style);els.turnRollPortrait.setAttribute('style',ui.turnRoll.portraitStyle);els.turnRollKicker.textContent=ui.turnRoll.kicker;els.turnRollName.textContent=ui.turnRoll.name;els.turnRollRole.textContent=ui.turnRoll.role;els.turnRollStatus.textContent=ui.turnRoll.status;els.turnRollDice.innerHTML=ui.turnRoll.dice;els.turnRollControl.innerHTML=ui.turnRoll.control;els.turnRoll.classList.toggle('hidden',!localCanViewTurnRoll());if(!localCanViewTurnRoll())dice3D?.hide()}
+    if(ui.actionDecision){els.actionDecision.className=ui.actionDecision.className;els.actionDecisionBody.innerHTML=ui.actionDecision.body;els.actionDecision.querySelector('.action-decision-kicker').textContent=ui.actionDecision.kicker}
     els.message.className=ui.message.className; els.messageEye.textContent=ui.message.eye; els.messageTitle.textContent=ui.message.title; els.messageBody.innerHTML=ui.message.body; els.messageContinue.textContent=ui.message.continueText; els.messageContinue.hidden=ui.message.continueHidden;
     const input=document.getElementById('lastBreathInput'); if(input) input.value=ui.message.input;
     applyingRemote=false; lockRemoteControls();
@@ -618,7 +623,7 @@
   function broadcastUI() { if(isHost&&room?.phase==='game')broadcast({type:'ui',ui:captureUI()}); }
   function installHostObservers() {
     const observer = new MutationObserver(() => queueUI());
-    [els.dice,els.controls,els.instruction,els.event,els.turnRoll,els.message,els.portal].filter(Boolean).forEach(node => observer.observe(node,{subtree:true,childList:true,attributes:true,characterData:true}));
+    [els.dice,els.controls,els.instruction,els.event,els.turnRoll,els.actionDecision,els.message,els.portal].filter(Boolean).forEach(node => observer.observe(node,{subtree:true,childList:true,attributes:true,characterData:true}));
   }
 
   function localOwnsSlot(slot) { return seatForSlot(slot)?.owner === token; }
@@ -634,6 +639,13 @@
     else {
       sendToHost('command', {command:{kind:'board', id}});
     }
+    return true;
+  }
+  function route3DActor(id) {
+    if (!room || room.phase !== 'game') return false;
+    if (!localOwnsActive()) { showRoomNotice('Waiting for the assigned Traveler on their device.'); return true; }
+    if (isHost) return false;
+    sendToHost('command', {command:{kind:'actor', id}});
     return true;
   }
   function challengedSlot() {
@@ -653,6 +665,7 @@
     if (!room || room.phase !== 'game' || isHost) return;
     const mine = localOwnsActive();
     els.controls.querySelectorAll('button').forEach(button => button.disabled = button.disabled || !mine);
+    els.actionDecision.querySelectorAll('button').forEach(button => button.disabled = button.disabled || !mine);
     els.turnRoll.querySelectorAll('button').forEach(button => button.disabled = button.disabled || !mine);
     if (!mine && game.phase !== 'monster' && game.phase !== 'ended') els.instruction.textContent = 'Waiting for ' + active().name + ' on another device…';
   }
@@ -686,6 +699,9 @@
   }
   function executeRemoteCommand(sender, command) {
     if(!isHost||room?.phase!=='game'||!command||commandOwner(command)!==sender)return;
+    if(command.kind==='actor'){
+      executingRemote=true;window.TabokSelect3DActor?.(command.id);executingRemote=false;queueUI();queueSnapshot();return;
+    }
     const target=findCommandTarget(command); if(!target||target.disabled)return;
     executingRemote=true;
     if(typeof target.click==='function')target.click();else target.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window}));
@@ -741,6 +757,7 @@
   setPill('MULTIPLAYER READY','waiting');
   window.TabokCanViewTurnRoll=localCanViewTurnRoll;
   window.TabokRoute3DHex=route3DHex;
+  window.TabokRoute3DActor=route3DActor;
   window.TabokBroadcastVisual=event=>{if(isHost&&room?.phase==='game'){broadcast({type:'visual-event',event});queueSnapshot();}};
   window.TabokMultiplayer={get room(){return room},get isHost(){return isHost},canViewActiveRoll:localCanViewTurnRoll,version:VERSION};
 })();

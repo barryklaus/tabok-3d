@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import { createCosmicSanctuary } from './cosmic-sanctuary.js?v=20260907C1';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createTravelerPilot } from './character-3d-travelers.js?v=20260907G4';
-import { createMonsterPilot } from './monster-3d-models.js?v=20260907G4';
-import { PortalCinematics } from './portal-cinematics.js?v=20260907I1';
+import { createMonsterPilot } from './monster-3d-models.js?v=20260908A1';
+import { PortalCinematics } from './portal-cinematics.js?v=20260908A1';
 import { makeRuinStoneMaps, makeWornHexGeometry, makeRuinFoundation, makeContactShadow } from './ruin-board-art.js?v=20260907R4';
 
 const SQRT3 = Math.sqrt(3);
@@ -1296,6 +1296,28 @@ export class TabokTrue3DBoard {
         actor.userData.actionResolve=null;
         resolve();
       }, duration);
+    });
+  }
+
+  playMajorKill(targetId, duration = 1050) {
+    const major = this.actors.get('MAJOR'), target = this.actors.get(targetId);
+    const visual = major?.userData.visual3D;
+    if (!major || !target || !visual) return Promise.resolve();
+    const dx = target.position.x - major.position.x, dz = target.position.z - major.position.z;
+    const heading = Math.atan2(dx, dz);
+    visual.rotation.y = heading; major.userData.heading = heading; major.userData.hasTravelHeading = true;
+    target.userData.visual3D?.userData.setMode?.('blast');
+    this.damageFeedback(targetId, 1);
+    const start = major.position.clone(), direction = new THREE.Vector3(dx, 0, dz).normalize(), reach = Math.min(.32, Math.max(0, Math.hypot(dx,dz)-1));
+    const strike = start.clone().addScaledVector(direction, reach), started = performance.now();
+    visual.userData.setMode?.('kill');
+    return new Promise(resolve => {
+      const step = now => {
+        const u = Math.min(1, (now-started)/duration), lunge = Math.sin(u*Math.PI)**2;
+        major.position.lerpVectors(start, strike, lunge);
+        if (u < 1) requestAnimationFrame(step); else { major.position.copy(start);visual.userData.setMode?.('idle');target.userData.visual3D?.userData.setMode?.('idle');resolve(); }
+      };
+      requestAnimationFrame(step);
     });
   }
 

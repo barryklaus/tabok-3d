@@ -146,7 +146,7 @@ export class PortalCinematics {
       actor.position.lerpVectors(ORIGIN, task.end, flight);
       actor.position.y = flight > 0 ? THREE.MathUtils.lerp(major ? 2.1 : 1.65, task.end.y, flight) + Math.sin(flight * Math.PI) * (major ? .7 : .22) : -.9 + rise * (major ? 3 : 2.55);
       actor.scale.setScalar(.02 + rise * .98);
-      if(visual){const dx=task.end.x-actor.position.x,dz=task.end.z-actor.position.z;visual.rotation.y=Math.atan2(dx,dz)+(major?Math.sin(rise*Math.PI)*.08:0);actor.userData.heading=visual.rotation.y;}
+      if(visual){const dx=task.end.x-actor.position.x,dz=task.end.z-actor.position.z,targetHeading=Math.atan2(dx,dz),summonSpin=major&&!this.reduced?(1-rise)*Math.PI*4:0;visual.rotation.y=targetHeading+summonSpin;actor.userData.heading=targetHeading;}
       if (major) {
         [.15,.3,.49].forEach((at,index) => this.impulse(task,'bolt'+index,at,u,()=>board.lightningStrike(index===2?ORIGIN:new THREE.Vector3(index?2.6:-2.8,0,index?-2:2),index===2?1.2:.65)));
       } else {
