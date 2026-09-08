@@ -1,10 +1,10 @@
 import * as THREE from 'three';
-import { createCosmicSanctuary } from './cosmic-sanctuary.js?v=20260908B2';
+import { createCosmicSanctuary } from './cosmic-sanctuary.js?v=20260908E1';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createTravelerPilot } from './character-3d-travelers.js?v=20260907G4';
 import { createMonsterPilot } from './monster-3d-models.js?v=20260908A1';
 import { PortalCinematics } from './portal-cinematics.js?v=20260908A1';
-import { makeRuinStoneMaps, makeWornHexGeometry, makeRuinFoundation, makeContactShadow } from './ruin-board-art.js?v=20260907R4';
+import { makeRuinStoneMaps, makeWornHexGeometry, makeRuinFoundation, makeContactShadow } from './ruin-board-art.js?v=20260908E1';
 
 const SQRT3 = Math.sqrt(3);
 const HEX_RADIUS = .72;
@@ -390,6 +390,20 @@ export class TabokTrue3DBoard {
     this.canvas.tabIndex = 0;
     this.canvas.style.touchAction = 'none';
     this.canvas.addEventListener('contextmenu', event => event.preventDefault());
+    this.canvas.addEventListener('webglcontextlost', event => {
+      event.preventDefault();
+      this.suspended = true;
+      document.documentElement.classList.add('gpu-context-lost');
+      window.dispatchEvent(new CustomEvent('tabok-gpu-paused'));
+    });
+    this.canvas.addEventListener('webglcontextrestored', () => {
+      this.suspended = document.hidden;
+      this.lastFrameAt = performance.now();
+      this.frameTimes.length = 0;
+      document.documentElement.classList.remove('gpu-context-lost');
+      this.resize();
+      window.dispatchEvent(new CustomEvent('tabok-gpu-restored'));
+    });
 
     this.textureLoader = new THREE.TextureLoader();
     await this.loadTextures();
@@ -1184,13 +1198,14 @@ export class TabokTrue3DBoard {
   setQuality(quality = 'auto') {
     this.quality = quality;
     const dpr = Math.max(1, devicePixelRatio || 1);
-    // Both rich presets are adaptive 60-fps profiles. "Cinematic" previously
-    // forced 1.75x resolution, six live lights and 2048px dynamic shadows—a
-    // severe 5K/Retina cost for detail that was rarely visible in motion.
+    const mobile = matchMedia('(max-width: 900px), (pointer: coarse)').matches;
+    // Cinematic remains the richest rendering path. Its adaptive floor prevents
+    // a transient effect from turning into a long frame-rate collapse, but the
+    // full lighting, portal geometry, debris and animation set stay enabled.
     this.adaptiveResolution = quality === 'full' || quality === 'auto';
-    this.renderRatioMin = quality === 'auto' ? .62 : quality === 'full' ? .68 : quality === 'lite' ? .62 : 1;
-    this.renderRatioMax = Math.min(dpr, quality === 'auto' ? 1.15 : quality === 'full' ? 1.2 : quality === 'ultra' ? 1 : .82);
-    this.renderRatio = this.adaptiveResolution ? Math.min(this.renderRatioMax, quality === 'auto' ? .92 : 1.05) : this.renderRatioMax;
+    this.renderRatioMin = quality === 'auto' ? (mobile ? .72 : .9) : quality === 'full' ? (mobile ? .68 : .72) : quality === 'lite' ? .62 : 1;
+    this.renderRatioMax = Math.min(dpr, quality === 'auto' ? (mobile ? 1 : 1.5) : quality === 'full' ? (mobile ? .92 : 1.2) : quality === 'ultra' ? 1 : .82);
+    this.renderRatio = this.adaptiveResolution ? Math.min(this.renderRatioMax, quality === 'auto' ? (mobile ? .9 : 1.3) : (mobile ? .86 : 1.05)) : this.renderRatioMax;
     this.renderer.setPixelRatio(this.renderRatio);
     this.lastFrameAt = performance.now();
     this.lastQualityCheckAt = this.lastFrameAt;
@@ -1201,14 +1216,14 @@ export class TabokTrue3DBoard {
     this.actorRoot.traverse(node => {
       if (node.userData.actorModelMesh) node.castShadow = false;
     });
-    const shadowSize = 1024;
+    const shadowSize = quality === 'auto' && !mobile ? 2048 : 1024;
     if (this.moonLight.shadow.mapSize.x !== shadowSize) {
       this.moonLight.shadow.mapSize.set(shadowSize, shadowSize);
       this.moonLight.shadow.map?.dispose();
       this.moonLight.shadow.map = null;
     }
     if (this.faultlineMaterial) this.faultlineMaterial.uniforms.uQuality.value = quality === 'ultra' ? .25 : quality === 'lite' ? .42 : 1;
-    const enabledLights = quality === 'auto' || quality === 'full' ? 3 : 2;
+    const enabledLights = quality === 'auto' && !mobile ? 6 : quality === 'auto' || quality === 'full' ? 3 : 2;
     this.templeLights.forEach((entry, index) => {
       // Every lantern and glow stays visible; only the costly lights are reduced.
       const enabled = enabledLights === 6 || (enabledLights === 3 ? index % 2 === 0 : index % 3 === 0);
@@ -1216,7 +1231,7 @@ export class TabokTrue3DBoard {
       entry.glow.material.opacity = .7;
     });
     this.portalArcs?.forEach((arc, index) => {
-      arc.visible = quality === 'full' || (quality === 'auto' ? index < 5 : index % 2 === 0);
+      arc.visible = quality === 'full' || quality === 'auto' || index % 2 === 0;
     });
     if (this.portalCapMaterial) {
       this.portalCapMaterial.displacementScale = quality === 'ultra' ? .035 : quality === 'lite' ? .065 : .105;
@@ -1469,7 +1484,7 @@ export class TabokTrue3DBoard {
     this.portalRuneMaterial.opacity = .76 + Math.sin(time * 2.35) * .16;
     this.portalEnergyMaterial.color.lerp(colorB, .045);
     this.portalEnergyMaterial.opacity = .64 + Math.sin(time * 2.9) * .2;
-    const updateArcGeometry = now - this.lastArcUpdateAt >= 1000 / (this.quality==='auto'?24:30);
+    const updateArcGeometry = now - this.lastArcUpdateAt >= 1000 / 30;
     this.portalArcs.forEach((arc, index) => {
       arc.material.color.lerp(colorB, .08);
       arc.material.opacity = .48 + Math.sin(time * 11.7 + index * 1.9) * .28;
@@ -1495,7 +1510,7 @@ export class TabokTrue3DBoard {
     this.portalRunes.rotation.z = time * .025;
     this.portalMist.rotation.z = -time * .055;
     this.portalDebris.forEach((shard, index) => {
-      shard.visible=this.quality!=='auto'||index%2===0;
+      shard.visible=true;
       if(!shard.visible)return;
       const data = shard.userData.portalDebris, angle = data.angle + time * data.speed;
       shard.position.set(Math.sin(angle) * data.radius, data.height + Math.sin(time * 1.35 + data.phase) * .13, Math.cos(angle) * data.radius);
@@ -1517,7 +1532,7 @@ export class TabokTrue3DBoard {
       glow.scale.setScalar(pulse);
       glow.material.opacity = glow.userData.baseOpacity * (.86 + Math.sin(time * 2.6 + glow.userData.phase) * .14);
     });
-    const actorInterval = this.quality === 'lite' ? 66 : this.quality === 'auto' ? 40 : 33;
+    const actorInterval = this.quality === 'lite' ? 66 : 33;
     if (now - this.lastActorModelUpdateAt >= actorInterval) {
       this.actorRoot.children.forEach(actor => {
         const visual = actor.userData.visual3D;

@@ -11,6 +11,11 @@ function disposeModel(root){
 
 export class TabokBustPreview {
   constructor(){
+    // Avoid a second WebGL context on iPhone/iPad. The main board retains the
+    // full 3D cast; the preview uses its illustrated fallback on mobile so
+    // Safari cannot evict the game tab under GPU memory pressure.
+    this.available=!matchMedia('(max-width: 900px), (pointer: coarse)').matches;
+    if(!this.available)return;
     this.canvas=document.createElement('canvas');
     this.canvas.className='character-bust-canvas';
     this.canvas.setAttribute('aria-hidden','true');
@@ -31,11 +36,12 @@ export class TabokBustPreview {
   }
 
   attach(host){
-    if(!host)return;
+    if(!host||!this.available)return;
     host.append(this.canvas);this.visible=true;this.observer.disconnect();this.observer.observe(host);this.resize();this.requestFrame();
   }
 
   show(id){
+    if(!this.available)return;
     if(this.id===id&&this.model)return;
     if(this.model){this.scene.remove(this.model);disposeModel(this.model)}
     this.id=id;this.model=createSculptedTraveler(id);this.model.scale.setScalar(1.12);this.model.position.set(0,.02,0);this.model.rotation.y=.08;

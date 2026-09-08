@@ -8,7 +8,10 @@ function randomFor(seed) {
 }
 
 export function makeRuinStoneMaps(image, type, anisotropy = 4) {
-  const size = 512;
+  // iOS Safari has a much tighter GPU-process memory ceiling than desktop
+  // browsers. The physical screen size makes 256px shared tile maps visually
+  // equivalent on phones while cutting this ten-texture set to one quarter.
+  const size = matchMedia('(max-width: 900px), (pointer: coarse)').matches ? 256 : 512;
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = size;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });

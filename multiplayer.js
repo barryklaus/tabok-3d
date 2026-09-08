@@ -2,9 +2,10 @@
 (() => {
   'use strict';
 
-  const VERSION = 'v0.59.0 Starpath · B2';
+  const VERSION = 'v0.62.0 Mobile Anchor · E1';
   const TOKEN_KEY = 'tabok-multiplayer-token';
   const NAME_KEY = 'tabok-multiplayer-name';
+  const ACTIVE_ROOM_KEY = 'tabok-active-guest-room';
   const NETWORK = window.TABOK_NETWORK || {};
   const DIRECT_ICE_SERVERS = [
     {urls:'stun:stun.cloudflare.com:3478'},
@@ -44,6 +45,10 @@
   let relayDetail = NETWORK.turnCredentialEndpoint ? 'Relay fallback configured.' : 'TURN relay endpoint not configured.';
   let iceConfigPromise = null;
   let joinTimeout = 0;
+  let rejoinTimer = 0;
+  let rejoinAttempts = 0;
+  let currentHostId = '';
+  let rejoining = false;
   const nameTimers = new Map();
 
   const safe = value => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -153,7 +158,8 @@
       console.error('[TABOK multiplayer]', error);
       clearTimeout(joinTimeout);
       const text = error.type === 'unavailable-id' ? 'That room code is already in use. Try hosting again.' : error.type === 'peer-unavailable' ? 'That room is not available. Confirm the host is still online and check the room code.' : 'Network error: ' + (error.type || error.message || 'unknown');
-      if (room?.phase === 'game') pushSystem(text); else renderLanding(text);
+      if (!isHost && currentHostId && (room?.phase === 'game' || rejoining)) scheduleGuestReconnect(text);
+      else if (room?.phase === 'game') pushSystem(text); else renderLanding(text);
       setPill('NETWORK ERROR', 'error');
     });
     peer.on('disconnected', () => {
@@ -180,26 +186,50 @@
     });
   }
 
-  function joinRoom(hostId) {
+  function scheduleGuestReconnect(reason = 'The mobile browser briefly suspended the connection.') {
+    if (isHost || !currentHostId || rejoinTimer) return;
+    clearTimeout(joinTimeout);
+    if (rejoinAttempts >= 5) {
+      rejoining = false;
+      try { sessionStorage.removeItem(ACTIVE_ROOM_KEY); } catch (_) {}
+      setPill('ROOM UNAVAILABLE', 'error');
+      renderJoin('Automatic rejoining could not reach the host. Confirm that the host is still online, then enter the room code again.');
+      return;
+    }
+    rejoining = true;
+    setPill('REJOINING ROOM', 'waiting');
+    showRoomNotice(reason + ' Rejoining automatically…');
+    const delay = Math.min(8000, 700 * Math.pow(1.7, rejoinAttempts++));
+    rejoinTimer = setTimeout(() => { rejoinTimer = 0; joinRoom(currentHostId, true); }, delay);
+  }
+
+  function rememberGuestRoom(hostId) {
+    currentHostId = hostId;
+    try { sessionStorage.setItem(ACTIVE_ROOM_KEY, JSON.stringify({hostId,at:Date.now()})); } catch (_) {}
+  }
+
+  function joinRoom(hostId, reconnecting = false) {
+    rememberGuestRoom(hostId);
     setPill('CONNECTING', 'waiting');
-    dialog.innerHTML = '<div class="mp-waiting"><h2>Finding the ruins…</h2><p>Connecting to room ' + safe(roomCode(hostId)) + '.</p></div>' + engineConfigMarkup();
+    if (!reconnecting) dialog.innerHTML = '<div class="mp-waiting"><h2>Finding the ruins…</h2><p>Connecting to room ' + safe(roomCode(hostId)) + '.</p></div>' + engineConfigMarkup();
     ensurePeer(null, () => {
       isHost = false;
       hostConnection = peer.connect(hostId, {reliable:true, serialization:'json'});
       hostConnection.on('open', () => {
         clearTimeout(joinTimeout);
+        clearTimeout(rejoinTimer); rejoinTimer = 0; rejoinAttempts = 0; rejoining = false;
         setPill('ROOM · ' + roomCode(hostId), 'online');
         hostConnection.send({type:'hello', token, label:localDisplayName, version:VERSION, relay:relayState === 'ready'});
       });
       hostConnection.on('data', receiveFromHost);
-      hostConnection.on('close', () => { clearTimeout(joinTimeout); setPill('HOST LOST', 'error'); showRoomNotice('The host disconnected. Your last received board state remains visible.'); });
-      hostConnection.on('error', error => { clearTimeout(joinTimeout); setPill('CONNECTION LOST', 'error'); showRoomNotice(error.message || 'Connection failed.'); });
+      hostConnection.on('close', () => { clearTimeout(joinTimeout); scheduleGuestReconnect('Connection paused. Your last board state remains visible.'); });
+      hostConnection.on('error', error => { clearTimeout(joinTimeout); scheduleGuestReconnect(error.message || 'Connection paused.'); });
       joinTimeout = setTimeout(() => {
         if (hostConnection?.open) return;
         try { hostConnection?.close(); } catch (_) {}
-        setPill('CONNECTION FAILED', 'error');
-        renderJoin('The room was found, but no WebRTC path opened. '+(relayState === 'ready' ? 'The TURN relay was available; ask the host to reload the same M4 build.' : 'TURN relay fallback is not available on this deployment.'));
-      }, 15000);
+        if (reconnecting) scheduleGuestReconnect('The room has not answered yet.');
+        else {setPill('CONNECTION FAILED', 'error');renderJoin('The room was found, but no WebRTC path opened. '+(relayState === 'ready' ? 'The TURN relay was available; ask the host to reload the same build.' : 'TURN relay fallback is not available on this deployment.'))}
+      }, reconnecting ? 8000 : 15000);
     });
   }
 
@@ -254,6 +284,7 @@
     if (!data || typeof data !== 'object') return;
     if (data.type === 'room') {
       room = data.room;
+      if (!isHost && room?.id) rememberGuestRoom(room.id);
       normalizeRoom();
       if (room.phase === 'lobby') {resetPortalVisuals();renderRoom();} else { setup.classList.add('hidden'); renderChat(); }
     } else if (data.type === 'game') {
@@ -467,7 +498,7 @@
     const lobbyGuide = '<div class="mp-start-path"><span class="'+(localSeat?'done':'current')+'"><b>1</b> Traveler claimed</span><span class="'+(localSeat?.roll!==null?'done':localSeat?'current':'')+'"><b>2</b> Roll starting position</span><span class="'+(roomReady()?'done':isHost?'current':'')+'"><b>3</b> Host begins</span></div>' + (localNeedsRoll?'<button class="primary mp-primary-roll" id="mpPrimaryRoll">Roll my starting position</button>':'');
     dialog.innerHTML = '<div class="eyebrow">Multiplayer lobby · ' + (isHost ? 'you are host' : 'connected guest') + '</div><h2>Choose your Traveler</h2><div class="room-code"><span>Room code</span><b>' + safe(roomCode(room.id)) + '</b><button id="mpCopyCode">Copy code</button></div>'+relayMarkup() +
       lobbyGuide +
-      '<div class="room-settings"><label>Traveler slots<select id="mpCapacity" ' + (!isHost?'disabled':'') + '>' + [1,2,3,4,5,6].map(n => '<option ' + (room.capacity===n?'selected':'') + '>'+n+'</option>').join('') + '</select></label><label>Animation pace<select id="mpSpeed" ' + (!isHost?'disabled':'') + '><option value="fast" ' + (room.speed==='fast'?'selected':'') + '>Fast</option><option value="cinematic" ' + (room.speed==='cinematic'?'selected':'') + '>Cinematic</option><option value="instant" ' + (room.speed==='instant'?'selected':'') + '>Instant</option></select></label><label>Board quality<select id="mpQuality" ' + (!isHost?'disabled':'') + '><option value="full" ' + (room.quality==='full'?'selected':'') + '>High Fidelity 60</option><option value="auto" ' + (room.quality==='auto'?'selected':'') + '>Cinematic 60 · adaptive detail</option><option value="ultra" ' + (room.quality==='ultra'?'selected':'') + '>Performance 60+</option><option value="lite" ' + (room.quality==='lite'?'selected':'') + '>Battery saver</option></select></label><label class="mp-auto-toggle"><input type="checkbox" id="mpAutoTreasure" '+(room.autoTreasureActions?'checked':'')+' '+(!isHost?'disabled':'')+'><span>Automate Take / Give / Steal / Grand Plunder</span></label></div>' +
+      '<div class="room-settings"><label>Traveler slots<select id="mpCapacity" ' + (!isHost?'disabled':'') + '>' + [1,2,3,4,5,6].map(n => '<option ' + (room.capacity===n?'selected':'') + '>'+n+'</option>').join('') + '</select></label><label>Animation pace<select id="mpSpeed" ' + (!isHost?'disabled':'') + '><option value="fast" ' + (room.speed==='fast'?'selected':'') + '>Fast</option><option value="cinematic" ' + (room.speed==='cinematic'?'selected':'') + '>Cinematic</option><option value="instant" ' + (room.speed==='instant'?'selected':'') + '>Instant</option></select></label><label>Board quality<select id="mpQuality" ' + (!isHost?'disabled':'') + '><option value="full" ' + (room.quality==='full'?'selected':'') + '>High Fidelity 60</option><option value="auto" ' + (room.quality==='auto'?'selected':'') + '>Cinematic · highest quality</option><option value="ultra" ' + (room.quality==='ultra'?'selected':'') + '>Performance 60+</option><option value="lite" ' + (room.quality==='lite'?'selected':'') + '>Battery saver</option></select></label><label class="mp-auto-toggle"><input type="checkbox" id="mpAutoTreasure" '+(room.autoTreasureActions?'checked':'')+' '+(!isHost?'disabled':'')+'><span>Automate Take / Give / Steal / Grand Plunder</span></label></div>' +
       '<div class="mp-seat-list">' + seats.map(renderLobbySeat).join('') + '</div>' + (isHost ? '<div class="mp-cpu-tools"><button class="mp-fill-cpu" id="mpFillCPU">Fill open slots with CPU</button><button class="mp-all-cpu" id="mpAllCPU">Make every slot CPU</button></div>' : '') + '<div class="mp-room-footer"><div class="mp-room-status">' + (roomReady() ? (humanSeats().length ? '' : 'All-CPU spectator match ready. ') + 'Starting order locked: ' + order.map((s,i) => (i+1)+'. '+safe(s.customName)+' (position '+s.roll+')').join(' · ') : openCount ? 'Waiting for '+openCount+' more Traveler'+(openCount===1?'':'s')+'. Share the room code, or the host can fill open slots with CPU.' : 'Everyone is connected. Each human now rolls once; CPU positions lock automatically. Available: '+(availablePositions.length?availablePositions.join(', '):'none')+'.') + '</div><button class="primary mp-start" id="mpStart" ' + (!isHost || !roomReady()?'disabled':'') + '>'+(isHost?(roomReady()?'Begin the Crossing':'Complete the steps above'):'Waiting for host')+'</button></div><div class="mp-alert" id="mpLobbyAlert"></div>' + engineConfigMarkup();
     document.getElementById('mpCopyCode').onclick = async () => { try { await navigator.clipboard.writeText(roomCode(room.id)); showLobbyAlert('Room code copied.'); } catch (_) { showLobbyAlert('Room code: ' + roomCode(room.id)); } };
     document.getElementById('mpCapacity').onchange = e => lobbyAction('capacity', {value:e.target.value});
@@ -769,8 +800,15 @@
 
   installGuideChat();
   renderChat();
-  renderLanding();
-  setPill('MULTIPLAYER READY','waiting');
+  let rememberedGuest = null;
+  try { rememberedGuest = JSON.parse(sessionStorage.getItem(ACTIVE_ROOM_KEY) || 'null'); } catch (_) {}
+  if (rememberedGuest?.hostId && Date.now() - rememberedGuest.at < 6 * 60 * 60 * 1000 && localDisplayName) {
+    renderLanding('Restoring your mobile session…');
+    setTimeout(() => joinRoom(rememberedGuest.hostId, true), 180);
+  } else {
+    renderLanding();
+    setPill('MULTIPLAYER READY','waiting');
+  }
   window.TabokCanViewTurnRoll=localCanViewTurnRoll;
   window.TabokRoute3DHex=route3DHex;
   window.TabokRoute3DActor=route3DActor;

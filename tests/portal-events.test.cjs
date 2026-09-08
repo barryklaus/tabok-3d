@@ -194,7 +194,7 @@ test('Starpath removes replay, resolves automation authoritatively, shortens Por
  assert.match(multiplayer,/hostSeat\.kind = 'human'/);
  assert.match(multiplayer,/mp-start-path/);
  assert.match(multiplayer,/mpPrimaryRoll/);
- assert.match(cosmic,/const width = 4096, height = 2048/);
+ assert.match(cosmic,/mobileMemoryProfile \? 2048 : 4096/);
  assert.match(cosmic,/for \(const offset of \[-width,0,width\]\)/);
  assert.match(cosmic,/LinearMipmapLinearFilter/);
 });
@@ -207,7 +207,7 @@ test('Gilded Fate uses reference-matched treasure art and engraved symbol dice',
   assert.match(html,new RegExp(asset.replaceAll('.','\\.')));
   assert.ok(fs.existsSync(path.join(root,asset)),`${name} production icon must exist`);
  }
- assert.match(html,/v0\.61\.0 CELESTIAL CONCORD/);
+ assert.match(html,/v0\.62\.0 MOBILE ANCHOR/);
  assert.match(dice,/Celestial face plate/);
  assert.match(dice,/new Path2D\('M86 28H426/);
  assert.match(dice,/context\.fillText\(String\(value\),256,264\)/);
@@ -216,21 +216,40 @@ test('Gilded Fate uses reference-matched treasure art and engraved symbol dice',
  assert.match(dice,/faceTexture\(label, kind, faceIndex\)/);
 });
 
-test('Celestial Concord unifies notices, renders a live bust and budgets Cinematic for 60 FPS',()=>{
+test('Celestial Concord unifies notices and renders the sculpted Traveler bust',()=>{
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  const css=fs.readFileSync(path.join(root,'celestial-ui.css'),'utf8');
  const board=fs.readFileSync(path.join(root,'true3d-board.js'),'utf8');
  const bust=fs.readFileSync(path.join(root,'character-bust-preview.js'),'utf8');
  const cosmic=fs.readFileSync(path.join(root,'cosmic-sanctuary.js'),'utf8');
- assert.match(html,/character-bust-preview\.js\?v=20260908D1/);
+ assert.match(html,/character-bust-preview\.js\?v=20260908E1/);
  assert.match(html,/character-bust-stage/);
  for(const selector of ['portal-judgment','rune-claim-fx','challenge-player-alert','portal-magic-words','actor-speech-bubble','impact-fx'])assert.match(css,new RegExp(selector));
  assert.match(css,/Celestial Concord/);
  assert.match(board,/quality === 'full' \|\| quality === 'auto'/);
- assert.match(board,/quality === 'auto' \? 1\.15/);
- assert.doesNotMatch(board,/mapSize\.set\(2048, 2048\)/);
  assert.match(board,/node\.castShadow = false/);
- assert.match(cosmic,/quality==='auto'\?60:84/);
+ assert.match(cosmic,/quality==='ultra'\?36:84/);
  assert.match(bust,/createSculptedTraveler/);
  assert.match(bust,/now-this\.lastFrame>=66/);
+});
+
+test('Mobile Anchor prevents Safari eviction, rejoins guests and restores full Cinematic detail',()=>{
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ const board=fs.readFileSync(path.join(root,'true3d-board.js'),'utf8');
+ const bust=fs.readFileSync(path.join(root,'character-bust-preview.js'),'utf8');
+ const cosmic=fs.readFileSync(path.join(root,'cosmic-sanctuary.js'),'utf8');
+ const ruin=fs.readFileSync(path.join(root,'ruin-board-art.js'),'utf8');
+ assert.match(html,/v0\.62\.0 MOBILE ANCHOR/);
+ assert.match(html,/Cinematic · highest quality/);
+ assert.match(cosmic,/mobileMemoryProfile \? 2048 : 4096/);
+ assert.match(ruin,/matches \? 256 : 512/);
+ assert.match(bust,/this\.available=!matchMedia/);
+ assert.match(multiplayer,/tabok-active-guest-room/);
+ assert.match(multiplayer,/scheduleGuestReconnect/);
+ assert.match(multiplayer,/Restoring your mobile session/);
+ assert.match(board,/quality === 'auto' && !mobile \? 2048 : 1024/);
+ assert.match(board,/quality === 'auto' && !mobile \? 6/);
+ assert.match(board,/quality === 'full' \|\| quality === 'auto'/);
+ assert.match(board,/shard\.visible=true/);
+ assert.match(board,/webglcontextlost/);
 });

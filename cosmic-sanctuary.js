@@ -8,7 +8,8 @@ export function createCosmicSanctuary(scene, stoneMaps) {
   const canvas = document.createElement('canvas');
   // A single static 4K equirectangular sky stays crisp on Retina/5K displays.
   // It costs no per-frame draw calls and mipmaps keep it inexpensive when zoomed.
-  const width = 4096, height = 2048;
+  const mobileMemoryProfile = matchMedia('(max-width: 900px), (pointer: coarse)').matches;
+  const width = mobileMemoryProfile ? 2048 : 4096, height = mobileMemoryProfile ? 1024 : 2048;
   canvas.width = width; canvas.height = height;
   const ctx = canvas.getContext('2d');
   ctx.fillStyle = '#03040b'; ctx.fillRect(0, 0, width, height);
@@ -78,10 +79,8 @@ export function createCosmicSanctuary(scene, stoneMaps) {
   let last=-Infinity;
   return {
     update(time, quality, reducedMotion){
-      const interval=quality==='ultra'?1/12:quality==='auto'?1/18:1/24;if(time-last<interval)return;last=time;
-      // Cinematic keeps the dense baked 4K sky and close silhouettes, while
-      // dropping only the least noticeable far-field moving rocks.
-      rocks.count=quality==='ultra'?36:quality==='auto'?60:84;
+      const interval=quality==='ultra'?1/12:1/24;if(time-last<interval)return;last=time;
+      rocks.count=quality==='ultra'?36:84;
       motion.slice(0,rocks.count).forEach((m,i)=>{
         object.position.copy(m.pos);object.position.y+=reducedMotion?0:Math.sin(time*.16+m.phase)*.18;
         object.rotation.copy(m.rotation);if(!reducedMotion)object.rotation.y+=time*.008;
