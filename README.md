@@ -1,6 +1,17 @@
 # TABOK — True 3D Board Alpha
 
-Version: **v0.60.0 — Gilded Fate · 2026.09.08.C1**
+Version: **v0.61.0 — Celestial Concord · 2026.09.08.D1**
+
+## v0.61.0 — Celestial Concord
+
+- Every modal, Portal judgment, Rune Bound notice, challenge, speech bubble,
+  impact label, and cinematic title now shares the same minimal antique-gold
+  observatory language.
+- The active-Traveler pane renders the actual sculpted 3D character from chest
+  to head, with a lightweight 15 FPS idle presentation independent of the board.
+- Cinematic is now a 60 FPS-priority adaptive profile: render density reacts to
+  measured frame time, animated actor shadows are removed, the live light count
+  is halved, shadows are 1024 px, and distant moving scenery updates less often.
 
 Starpath removes Replay Last Moment, lets a Traveler enter the Portal as soon
 as any legal route reaches it within the remaining movement, and makes automatic
@@ -248,7 +259,7 @@ Build: **2026.09.04.V1**
 - Adds six localized warm entrance torches with subtle non-random flame and glow animation.
 - Adds a color-reactive overhead Portal spotlight that changes with rejection, Reckoning, and Crossing states.
 - Uses soft contact shadows and filmic highlight control while preserving tile readability.
-- High Fidelity 60 activates three real torch lights while preserving all six visible flames and glows; Cinematic maximum restores all six real lights.
+- High Fidelity 60 and Cinematic 60 both use three real torch lights while preserving all six visible flames and glows.
 
 ### Living Stone material pass
 
@@ -419,7 +430,7 @@ depth, illumination, and legibility while retaining the complete multiplayer gam
 - Performance 60+ disables costly secondary effects; High Fidelity 60 retains the full atmosphere and adapts before removing visible detail.
 - Important gameplay animation remains: movement, dice, treasure transfers, Portal judgment, Crossing, Last Breath, and Answer-or-Die.
 - The live FPS meter is always visible and can report high-refresh rates up to 240 FPS. Actual FPS follows the browser, device, refresh rate, and power settings.
-- Cinematic maximum, Performance 60+, and Battery saver remain available for comparison.
+- Cinematic 60, Performance 60+, and Battery saver remain available for comparison.
 
 ## Multiplayer alpha
 
@@ -489,7 +500,7 @@ remembered on that device.
 - Floor tiles receive shadows but no longer waste time casting nearly invisible shadows; characters, Monsters, equipment, the Portal, and ruins retain dimensional lighting.
 - All six lantern flames and glows remain visible while High Fidelity uses three real scene lights. Cinematic restores all six.
 - Portal lightning retains its full animation but updates its irregular geometry at 30 Hz while camera movement, dice, characters, and the final render remain at 60 Hz.
-- **Cinematic maximum** preserves maximum render density and effects for stronger desktop hardware; **Performance 60+** and **Battery saver** provide fixed lower-cost profiles.
+- **Cinematic 60** preserves the rich effects while adapting invisible render cost toward a 60 FPS frame budget; **Performance 60+** and **Battery saver** provide fixed lower-cost profiles.
 - Procedural audio uses a small number of native audio nodes and does not add
   network weight to the game.
 

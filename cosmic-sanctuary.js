@@ -78,8 +78,10 @@ export function createCosmicSanctuary(scene, stoneMaps) {
   let last=-Infinity;
   return {
     update(time, quality, reducedMotion){
-      const interval=quality==='ultra'?1/12:1/24;if(time-last<interval)return;last=time;
-      rocks.count=quality==='ultra'?36:84;
+      const interval=quality==='ultra'?1/12:quality==='auto'?1/18:1/24;if(time-last<interval)return;last=time;
+      // Cinematic keeps the dense baked 4K sky and close silhouettes, while
+      // dropping only the least noticeable far-field moving rocks.
+      rocks.count=quality==='ultra'?36:quality==='auto'?60:84;
       motion.slice(0,rocks.count).forEach((m,i)=>{
         object.position.copy(m.pos);object.position.y+=reducedMotion?0:Math.sin(time*.16+m.phase)*.18;
         object.rotation.copy(m.rotation);if(!reducedMotion)object.rotation.y+=time*.008;

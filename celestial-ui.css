@@ -258,3 +258,146 @@ select,input,textarea{
 @media (prefers-reduced-motion:reduce){
   .dialog,.turn-roll-dialog,.action-decision-shell,.player,.die{transition:none!important}
 }
+
+/* v0.61 Celestial Concord — every interruption speaks one visual language. */
+.overlay,.turn-roll-overlay,.action-decision-overlay{
+  background:rgba(2,2,2,.74)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+}
+.dialog,.turn-roll-dialog,.action-decision-shell,.mp-dialog{
+  border-radius:0!important;border:1px solid rgba(184,150,88,.48)!important;
+  clip-path:polygon(18px 0,calc(100% - 18px) 0,100% 18px,100% calc(100% - 18px),calc(100% - 18px) 100%,18px 100%,0 calc(100% - 18px),0 18px)!important;
+  background:linear-gradient(180deg,rgba(8,7,5,.97),rgba(3,3,3,.98))!important;
+  box-shadow:0 24px 72px rgba(0,0,0,.76),inset 0 0 48px rgba(184,150,88,.025)!important;
+}
+.dialog::before,.turn-roll-dialog::before,.action-decision-shell::before,.mp-dialog::before{
+  content:"◇"!important;position:absolute!important;left:50%!important;top:-8px!important;transform:translateX(-50%)!important;
+  padding:0 9px!important;background:#070604!important;color:var(--cel-bright)!important;font:13px/16px var(--cel-serif)!important;
+}
+.dialog::after,.turn-roll-dialog::after,.action-decision-shell::after,.mp-dialog::after{
+  content:""!important;position:absolute!important;inset:10px!important;pointer-events:none!important;
+  border:0!important;border-left:1px solid var(--cel-faint)!important;border-right:1px solid var(--cel-faint)!important;box-shadow:none!important;
+}
+.dialog h2,.turn-roll-name,.action-decision-title,.mp-dialog>h2{
+  color:var(--cel-bright)!important;text-shadow:none!important;font-family:var(--cel-serif)!important;font-weight:400!important;letter-spacing:.12em!important;
+}
+.dialog .eyebrow,.turn-roll-kicker,.action-decision-kicker,.trivia-reason{
+  color:var(--cel-gold)!important;text-shadow:none!important;font-family:var(--cel-sans)!important;font-size:8px!important;font-weight:600!important;letter-spacing:.28em!important;text-transform:uppercase!important;
+}
+.result,.last-breath-result,.trivia-result,.answer-locked,.group-result,.mp-alert,.event{
+  border:0!important;border-left:1px solid var(--cel-line)!important;border-right:1px solid var(--cel-line)!important;border-radius:0!important;
+  background:linear-gradient(90deg,transparent,rgba(184,150,88,.07),transparent)!important;box-shadow:none!important;color:#b9aa8d!important;
+}
+.challenge-player-alert{
+  margin:8px 0 17px!important;padding:12px 18px!important;border:0!important;border-top:1px solid var(--cel-line)!important;border-bottom:1px solid var(--cel-line)!important;
+  background:linear-gradient(90deg,transparent,rgba(184,150,88,.08),transparent)!important;box-shadow:none!important;animation:celestialNoticeBreath 2.4s ease-in-out infinite!important;
+}
+.challenge-player-alert small{color:var(--cel-dim)!important;font:600 8px var(--cel-sans)!important;letter-spacing:.28em!important}
+.challenge-player-alert strong{color:var(--cel-bright)!important;font:400 clamp(20px,3.2vw,34px)/1.08 var(--cel-serif)!important;letter-spacing:.1em!important;text-shadow:none!important}
+@keyframes celestialNoticeBreath{50%{border-color:var(--cel-bright);background:linear-gradient(90deg,transparent,rgba(184,150,88,.12),transparent)}}
+
+/* Portal Judgment: engraved observatory instrument, never a neon card. */
+#messageOverlay.portal-judgment{background:rgba(2,2,2,.72)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;perspective:none!important}
+#messageOverlay.portal-judgment::before,#messageOverlay.portal-judgment::after{display:none!important}
+#messageOverlay.portal-judgment .dialog,#messageOverlay.portal-local .dialog{
+  width:min(680px,calc(100vw - 24px))!important;padding:30px 34px 26px!important;border:1px solid var(--cel-line)!important;border-radius:0!important;
+  background:linear-gradient(180deg,rgba(8,7,5,.965),rgba(3,3,3,.98))!important;background-image:none!important;
+  color:#c7b99e!important;box-shadow:0 26px 78px #000!important;animation:celestialDialogIn .34s cubic-bezier(.2,.78,.25,1) both!important;
+}
+#messageOverlay.portal-judgment .dialog::before,#messageOverlay.portal-local .dialog::before{
+  content:"◇  THE VEIL PASSES JUDGMENT  ◇"!important;display:block!important;position:static!important;transform:none!important;
+  margin:-5px auto 17px!important;padding:0!important;background:transparent!important;color:var(--cel-gold)!important;text-align:center!important;
+  font:600 8px var(--cel-sans)!important;letter-spacing:.3em!important;text-shadow:none!important;animation:none!important;
+}
+#messageOverlay.portal-judgment .dialog::after,#messageOverlay.portal-local .dialog::after{inset:10px!important;border:0!important;border-left:1px solid var(--cel-faint)!important;border-right:1px solid var(--cel-faint)!important}
+.portal-judgment .judgment-seal{
+  width:64px!important;height:64px!important;margin:0 auto 14px!important;border:1px solid var(--cel-line)!important;border-radius:50%!important;
+  background:radial-gradient(circle,rgba(221,196,142,.72) 0 2%,transparent 4% 31%,rgba(184,150,88,.14) 32% 34%,transparent 35%)!important;
+  box-shadow:0 0 22px rgba(184,150,88,.12),inset 0 0 18px #000!important;
+}
+.portal-judgment .judgment-seal::before{inset:-7px!important;border:1px dotted var(--cel-line)!important;animation:sealOrbit 24s linear infinite!important}
+.portal-judgment .judgment-seal::after{inset:12px!important;border:1px solid var(--cel-faint)!important;box-shadow:none!important}
+.portal-judgment .judgment-seal span{color:var(--cel-bright)!important;font:400 25px var(--cel-serif)!important;text-shadow:none!important;animation:none!important}
+.portal-judgment .dialog h2{margin:8px 0!important;color:var(--cel-bright)!important;font:400 clamp(28px,4vw,44px)/1.08 var(--cel-serif)!important;letter-spacing:.11em!important;text-shadow:none!important}
+.portal-judgment .dialog h2::after{content:"◇  ·  ◇"!important;margin:17px auto 0!important;background:linear-gradient(90deg,transparent,var(--cel-line),transparent) center/100% 1px no-repeat!important;color:var(--cel-dim)!important;text-shadow:none!important}
+.portal-judgment .cards{gap:0!important;margin:22px 0 18px!important;border-top:1px solid var(--cel-faint)!important;border-bottom:1px solid var(--cel-faint)!important}
+.portal-judgment .card,.portal-card-back,.portal-card-face{
+  border:0!important;border-radius:0!important;background:rgba(5,4,3,.72)!important;color:var(--cel-bright)!important;
+  box-shadow:none!important;text-shadow:none!important;clip-path:none!important;
+}
+.portal-judgment .card+.card{border-left:1px solid var(--cel-faint)!important}
+.portal-judgment .card::before,.portal-judgment .card::after{color:var(--cel-dim)!important;border:0!important;text-shadow:none!important}
+.portal-card-back{background:radial-gradient(circle,rgba(184,150,88,.12),transparent 55%)!important}
+.rune-digit,.portal-card-face b,.portal-judgment .card b{color:var(--cel-bright)!important;-webkit-text-stroke:0!important;text-shadow:none!important;background:transparent!important;filter:none!important}
+.portal-judgment .card.match,.portal-judgment .card.selected{border-color:var(--cel-bright)!important;background:linear-gradient(rgba(184,150,88,.13),rgba(5,4,3,.82))!important;box-shadow:inset 0 0 20px rgba(184,150,88,.08)!important}
+#messageOverlay.portal-local{display:grid!important;place-items:center!important;pointer-events:auto!important;background:rgba(2,2,2,.54)!important}
+#messageOverlay.portal-local .dialog{position:relative!important;left:auto!important;top:auto!important;transform:none!important;max-height:calc(100dvh - 28px)!important;overflow:auto!important}
+#messageOverlay.portal-local .card{min-height:104px!important}
+@keyframes celestialDialogIn{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
+
+/* Rune Bound becomes a compact magical notice over the board. */
+.rune-claim-fx{
+  inset:auto!important;left:50%!important;top:18%!important;width:min(460px,calc(100vw - 28px))!important;height:auto!important;
+  transform:translateX(-50%)!important;display:block!important;overflow:visible!important;background:transparent!important;isolation:auto!important;
+}
+.rune-claim-fx::before,.rune-claim-fx::after{
+  left:50%!important;top:50%!important;width:130px!important;height:130px!important;border:1px dotted var(--cel-line)!important;border-radius:50%!important;
+  background:none!important;mask:none!important;-webkit-mask:none!important;opacity:.45!important;animation:runeClaimWheel 18s linear infinite!important;
+}
+.rune-claim-fx::after{width:96px!important;height:96px!important;border-style:solid!important;animation-direction:reverse!important;animation-duration:12s!important}
+.rune-claim-core{
+  position:relative!important;inset:auto!important;width:100%!important;min-height:0!important;display:grid!important;grid-template-columns:64px 1fr!important;
+  align-items:center!important;justify-items:start!important;gap:18px!important;padding:18px 28px!important;border-top:1px solid var(--cel-line)!important;border-bottom:1px solid var(--cel-line)!important;
+  background:linear-gradient(90deg,transparent,rgba(5,4,3,.97) 12% 88%,transparent)!important;text-align:left!important;
+}
+.rune-claim-die{width:58px!important;box-shadow:none!important;background:radial-gradient(circle,rgba(184,150,88,.18),#080705 68%)!important;color:var(--cel-bright)!important;font:400 29px var(--cel-serif)!important;filter:drop-shadow(0 0 12px rgba(184,150,88,.18))!important}
+.rune-claim-copy{width:auto!important;max-width:none!important;color:var(--cel-bright)!important;font:400 clamp(20px,3vw,29px)/1.05 var(--cel-serif)!important;letter-spacing:.12em!important;text-align:left!important;text-shadow:none!important}
+.rune-claim-copy small,.rune-claim-name{margin:0 0 7px!important;color:var(--cel-dim)!important;font:600 7px/1.35 var(--cel-sans)!important;letter-spacing:.24em!important;text-shadow:none!important}
+.rune-claim-name{margin:8px 0 0!important}.rune-claim-spark{display:none!important}
+
+/* Cinematics keep their scenes; their typography now belongs to the HUD. */
+.crossing-name,.major-summon-copy,.portal-magic-words{
+  padding:13px 25px!important;border:0!important;border-top:1px solid var(--cel-line)!important;border-bottom:1px solid var(--cel-line)!important;border-radius:0!important;
+  background:linear-gradient(90deg,transparent,rgba(5,4,3,.88) 16% 84%,transparent)!important;color:var(--cel-bright)!important;
+  box-shadow:none!important;filter:none!important;text-shadow:none!important;font-family:var(--cel-serif)!important;font-weight:400!important;letter-spacing:.13em!important;
+}
+.crossing-name small,.major-summon-copy small,.portal-magic-words small{color:var(--cel-gold)!important;font:600 7px var(--cel-sans)!important;letter-spacing:.3em!important;text-shadow:none!important}
+.portal-magic-words{width:min(440px,calc(100vw - 24px))!important}
+.portal-magic-words strong{color:inherit!important;font:400 clamp(20px,3vw,32px)/1.12 var(--cel-serif)!important;letter-spacing:.09em!important;text-shadow:none!important}
+.portal-magic-words[data-kind=rejection],.portal-magic-words[data-kind=death]{color:#d4a9a1!important}
+.portal-magic-words[data-kind=crossing]{color:#d8c99f!important}
+.portal-magic-words[data-kind=fireball],.portal-magic-words[data-kind=pounce]{color:#d5b274!important}
+
+/* Small notifications, world labels and speech. */
+.impact-fx::before,.impact-fx::after{display:none!important}
+.impact-fx span{
+  padding:11px 25px!important;border:0!important;border-top:1px solid var(--cel-line)!important;border-bottom:1px solid var(--cel-line)!important;
+  border-radius:0!important;background:linear-gradient(90deg,transparent,rgba(5,4,3,.87),transparent)!important;color:var(--cel-bright)!important;
+  box-shadow:none!important;text-shadow:none!important;font:400 clamp(14px,2vw,22px) var(--cel-serif)!important;letter-spacing:.18em!important;
+}
+.actor-speech-bubble,.actor-tooltip{
+  border:1px solid var(--cel-line)!important;border-radius:0!important;background:rgba(5,4,3,.94)!important;box-shadow:0 8px 26px rgba(0,0,0,.64)!important;
+  color:#d6c8aa!important;font-family:var(--cel-serif)!important;font-weight:400!important;letter-spacing:.045em!important;
+}
+.actor-speech-bubble::after{border-color:var(--cel-line)!important;background:#070604!important}
+.actor-speech-bubble.heart-loss{border-color:#a85c58!important;background:#160706!important;color:#d9aaa4!important;text-shadow:none!important;box-shadow:0 8px 24px #000!important}
+.actor-tooltip strong{color:var(--cel-bright)!important;text-shadow:none!important}
+.last-breath .last-breath-meter,.major-trivia .trivia-timer{height:2px!important;border:0!important;background:rgba(184,150,88,.14)!important;box-shadow:none!important}
+.last-breath .last-breath-meter i,.major-trivia .trivia-timer i{background:var(--cel-bright)!important;box-shadow:0 0 8px rgba(221,196,142,.25)!important}
+.last-breath-input,.trivia-option{border-radius:0!important;box-shadow:none!important}
+.trivia-option.correct{border-color:#bca866!important;color:#e7d8ad!important;background:rgba(148,126,57,.12)!important}
+.trivia-option.wrong{border-color:#8f514b!important;color:#c89b92!important;background:rgba(100,35,31,.12)!important}
+
+/* Live, inexpensive chest-to-head render of the actual sculpted Traveler. */
+.character-preview{min-height:270px!important;background:radial-gradient(circle at 50% 38%,rgba(184,150,88,.08),transparent 48%),rgba(4,4,3,.96)!important}
+.character-preview::before,.character-preview::after{z-index:1!important;pointer-events:none!important}
+.character-bust-stage{position:absolute;inset:0;z-index:2;overflow:hidden;contain:strict;mask-image:linear-gradient(#000 0 82%,transparent 99%);-webkit-mask-image:linear-gradient(#000 0 82%,transparent 99%)}
+.character-bust-canvas{display:block;width:100%;height:100%;filter:drop-shadow(0 12px 16px #000)}
+.character-preview .preview-caption{left:8%!important;right:8%!important;top:auto!important;bottom:10px!important;max-width:none!important;z-index:4!important;padding:8px 4px!important}
+.character-preview .preview-caption strong{font-size:12px!important}.character-preview .preview-caption span{font-size:6px!important}
+
+@media(max-width:760px){
+  #messageOverlay.portal-judgment .dialog,#messageOverlay.portal-local .dialog{width:calc(100vw - 18px)!important;padding:22px 17px 18px!important;max-height:calc(100dvh - 18px)!important}
+  .portal-judgment .cards{gap:0!important}.portal-judgment .card{min-height:96px!important}.rune-claim-fx{top:13%!important}
+  .rune-claim-core{grid-template-columns:48px 1fr!important;gap:12px!important;padding:14px 18px!important}.rune-claim-die{width:46px!important}.rune-claim-copy{font-size:19px!important}
+  .character-bust-stage{min-height:180px}.character-preview .preview-caption{bottom:5px!important}
+}

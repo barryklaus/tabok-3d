@@ -207,11 +207,30 @@ test('Gilded Fate uses reference-matched treasure art and engraved symbol dice',
   assert.match(html,new RegExp(asset.replaceAll('.','\\.')));
   assert.ok(fs.existsSync(path.join(root,asset)),`${name} production icon must exist`);
  }
- assert.match(html,/v0\.60\.0 GILDED FATE/);
+ assert.match(html,/v0\.61\.0 CELESTIAL CONCORD/);
  assert.match(dice,/Celestial face plate/);
  assert.match(dice,/new Path2D\('M86 28H426/);
  assert.match(dice,/context\.fillText\(String\(value\),256,264\)/);
  assert.match(dice,/const treasureChest=/);
  assert.match(dice,/const hood=/);
  assert.match(dice,/faceTexture\(label, kind, faceIndex\)/);
+});
+
+test('Celestial Concord unifies notices, renders a live bust and budgets Cinematic for 60 FPS',()=>{
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ const css=fs.readFileSync(path.join(root,'celestial-ui.css'),'utf8');
+ const board=fs.readFileSync(path.join(root,'true3d-board.js'),'utf8');
+ const bust=fs.readFileSync(path.join(root,'character-bust-preview.js'),'utf8');
+ const cosmic=fs.readFileSync(path.join(root,'cosmic-sanctuary.js'),'utf8');
+ assert.match(html,/character-bust-preview\.js\?v=20260908D1/);
+ assert.match(html,/character-bust-stage/);
+ for(const selector of ['portal-judgment','rune-claim-fx','challenge-player-alert','portal-magic-words','actor-speech-bubble','impact-fx'])assert.match(css,new RegExp(selector));
+ assert.match(css,/Celestial Concord/);
+ assert.match(board,/quality === 'full' \|\| quality === 'auto'/);
+ assert.match(board,/quality === 'auto' \? 1\.15/);
+ assert.doesNotMatch(board,/mapSize\.set\(2048, 2048\)/);
+ assert.match(board,/node\.castShadow = false/);
+ assert.match(cosmic,/quality==='auto'\?60:84/);
+ assert.match(bust,/createSculptedTraveler/);
+ assert.match(bust,/now-this\.lastFrame>=66/);
 });

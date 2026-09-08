@@ -343,6 +343,8 @@ export class TabokTrue3DBoard {
     this.qualityRecoveryChecks = 0;
     this.lastArcUpdateAt = 0;
     this.lastActorModelUpdateAt = 0;
+    this.lastSpeechUpdateAt = 0;
+    this.reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.framingKey = '';
     this.suspended = document.hidden;
     this.ready = this.init();
@@ -458,7 +460,9 @@ export class TabokTrue3DBoard {
     this.moonLight = new THREE.DirectionalLight(0xd8d0ff, 4.25);
     this.moonLight.position.set(-9, 18, 10);
     this.moonLight.castShadow = true;
-    this.moonLight.shadow.mapSize.set(2048, 2048);
+    // A 1024 map is indistinguishable at the board camera distance but costs a
+    // quarter of the fill/memory of the former 2048 map on Retina displays.
+    this.moonLight.shadow.mapSize.set(1024, 1024);
     this.moonLight.shadow.camera.left = this.moonLight.shadow.camera.bottom = -19;
     this.moonLight.shadow.camera.right = this.moonLight.shadow.camera.top = 19;
     this.moonLight.shadow.bias = -.00035;
@@ -991,7 +995,9 @@ export class TabokTrue3DBoard {
         if (!node.isMesh) return;
         node.userData.preserveMaterial = true;
         node.userData.actorModelMesh = true;
-        node.castShadow = this.quality === 'auto';
+        // Tiny animated figures read through their contact glow and key light;
+        // six skinned shadow casters were a disproportionate frame-time spike.
+        node.castShadow = false;
         node.receiveShadow = false;
       });
       // The group remains the invisible rules/selection anchor. The rendered
@@ -1178,12 +1184,13 @@ export class TabokTrue3DBoard {
   setQuality(quality = 'auto') {
     this.quality = quality;
     const dpr = Math.max(1, devicePixelRatio || 1);
-    // full = visually rich adaptive 60 fps; auto = uncapped cinematic mode;
-    // ultra/lite are increasingly conservative fixed performance profiles.
-    this.adaptiveResolution = quality === 'full';
-    this.renderRatioMin = quality === 'full' ? .72 : quality === 'lite' ? .68 : 1;
-    this.renderRatioMax = Math.min(dpr, quality === 'auto' ? 1.75 : quality === 'full' ? 1.25 : quality === 'ultra' ? 1 : .85);
-    this.renderRatio = this.adaptiveResolution ? Math.min(this.renderRatioMax, 1.1) : this.renderRatioMax;
+    // Both rich presets are adaptive 60-fps profiles. "Cinematic" previously
+    // forced 1.75x resolution, six live lights and 2048px dynamic shadows—a
+    // severe 5K/Retina cost for detail that was rarely visible in motion.
+    this.adaptiveResolution = quality === 'full' || quality === 'auto';
+    this.renderRatioMin = quality === 'auto' ? .62 : quality === 'full' ? .68 : quality === 'lite' ? .62 : 1;
+    this.renderRatioMax = Math.min(dpr, quality === 'auto' ? 1.15 : quality === 'full' ? 1.2 : quality === 'ultra' ? 1 : .82);
+    this.renderRatio = this.adaptiveResolution ? Math.min(this.renderRatioMax, quality === 'auto' ? .92 : 1.05) : this.renderRatioMax;
     this.renderer.setPixelRatio(this.renderRatio);
     this.lastFrameAt = performance.now();
     this.lastQualityCheckAt = this.lastFrameAt;
@@ -1192,16 +1199,16 @@ export class TabokTrue3DBoard {
     document.documentElement.dataset.renderScale = String(this.renderRatio);
     this.renderer.shadowMap.enabled = quality !== 'ultra' && quality !== 'lite';
     this.actorRoot.traverse(node => {
-      if (node.userData.actorModelMesh) node.castShadow = quality === 'auto';
+      if (node.userData.actorModelMesh) node.castShadow = false;
     });
-    const shadowSize = quality === 'auto' ? 2048 : 1024;
+    const shadowSize = 1024;
     if (this.moonLight.shadow.mapSize.x !== shadowSize) {
       this.moonLight.shadow.mapSize.set(shadowSize, shadowSize);
       this.moonLight.shadow.map?.dispose();
       this.moonLight.shadow.map = null;
     }
     if (this.faultlineMaterial) this.faultlineMaterial.uniforms.uQuality.value = quality === 'ultra' ? .25 : quality === 'lite' ? .42 : 1;
-    const enabledLights = quality === 'auto' ? 6 : quality === 'full' ? 3 : 2;
+    const enabledLights = quality === 'auto' || quality === 'full' ? 3 : 2;
     this.templeLights.forEach((entry, index) => {
       // Every lantern and glow stays visible; only the costly lights are reduced.
       const enabled = enabledLights === 6 || (enabledLights === 3 ? index % 2 === 0 : index % 3 === 0);
@@ -1209,7 +1216,7 @@ export class TabokTrue3DBoard {
       entry.glow.material.opacity = .7;
     });
     this.portalArcs?.forEach((arc, index) => {
-      arc.visible = quality === 'auto' || quality === 'full' || index % 2 === 0;
+      arc.visible = quality === 'full' || (quality === 'auto' ? index < 5 : index % 2 === 0);
     });
     if (this.portalCapMaterial) {
       this.portalCapMaterial.displacementScale = quality === 'ultra' ? .035 : quality === 'lite' ? .065 : .105;
@@ -1223,15 +1230,15 @@ export class TabokTrue3DBoard {
     const delta = now - this.lastFrameAt;
     this.lastFrameAt = now;
     if (delta > 4 && delta < 100) this.frameTimes.push(delta);
-    if (this.frameTimes.length > 120) this.frameTimes.shift();
-    if (now - this.lastQualityCheckAt < 1600 || this.frameTimes.length < 45) return;
+    if (this.frameTimes.length > 90) this.frameTimes.shift();
+    if (now - this.lastQualityCheckAt < 900 || this.frameTimes.length < 30) return;
     const average = this.frameTimes.reduce((sum, value) => sum + value, 0) / this.frameTimes.length;
     const fps = 1000 / average;
     let next = this.renderRatio;
-    if (fps < 55.5) {
-      next = Math.max(this.renderRatioMin, this.renderRatio - (fps < 48 ? .14 : .08));
+    if (fps < 57.5) {
+      next = Math.max(this.renderRatioMin, this.renderRatio - (fps < 48 ? .18 : .1));
       this.qualityRecoveryChecks = 0;
-    } else if (fps > 59.2 && this.renderRatio < this.renderRatioMax) {
+    } else if (fps > 59.5 && this.renderRatio < this.renderRatioMax) {
       this.qualityRecoveryChecks += 1;
       if (this.qualityRecoveryChecks >= 3) {
         next = Math.min(this.renderRatioMax, this.renderRatio + .05);
@@ -1417,7 +1424,7 @@ export class TabokTrue3DBoard {
     if (this.suspended) return;
     this.tuneResolution(now);
     const time = (now - this.startedAt) / 1000;
-    this.cosmicSanctuary?.update(time, this.quality, matchMedia('(prefers-reduced-motion: reduce)').matches);
+    this.cosmicSanctuary?.update(time, this.quality, this.reducedMotion);
     if (this.faultlineMaterial) {
       this.faultlineMaterial.uniforms.uTime.value = time;
       const target = this.majorPresent ? 1 : 0;
@@ -1425,9 +1432,9 @@ export class TabokTrue3DBoard {
     }
     if(this.cameraFocus){const t=Math.min(1,(now-this.cameraFocus.started)/this.cameraFocus.duration),eased=1-Math.pow(1-t,3);this.controls.target.lerpVectors(this.cameraFocus.from,this.cameraFocus.to,eased);if(t>=1)this.cameraFocus=null}
     this.controls.update();
-    this.actorSpeech.forEach(entry=>this.positionActorSpeech(entry));
+    if(now-this.lastSpeechUpdateAt>=33){this.actorSpeech.forEach(entry=>this.positionActorSpeech(entry));this.lastSpeechUpdateAt=now}
     const cinematic=this.summonCinematic,cinematicAge=cinematic?(now-cinematic.started):Infinity,cinematicLive=cinematicAge<cinematic?.duration;
-    const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reducedMotion=this.reducedMotion;
     const majorStorm=cinematicLive&&cinematic.major&&!reducedMotion;
     const stormProgress=cinematicLive?cinematicAge/cinematic.duration:1;
     const flash=majorStorm?Math.max(...[.15,.3,.49].map(at=>Math.max(0,1-Math.abs(stormProgress-at)*65))):0;
@@ -1462,7 +1469,7 @@ export class TabokTrue3DBoard {
     this.portalRuneMaterial.opacity = .76 + Math.sin(time * 2.35) * .16;
     this.portalEnergyMaterial.color.lerp(colorB, .045);
     this.portalEnergyMaterial.opacity = .64 + Math.sin(time * 2.9) * .2;
-    const updateArcGeometry = now - this.lastArcUpdateAt >= 1000 / 30;
+    const updateArcGeometry = now - this.lastArcUpdateAt >= 1000 / (this.quality==='auto'?24:30);
     this.portalArcs.forEach((arc, index) => {
       arc.material.color.lerp(colorB, .08);
       arc.material.opacity = .48 + Math.sin(time * 11.7 + index * 1.9) * .28;
@@ -1488,6 +1495,8 @@ export class TabokTrue3DBoard {
     this.portalRunes.rotation.z = time * .025;
     this.portalMist.rotation.z = -time * .055;
     this.portalDebris.forEach((shard, index) => {
+      shard.visible=this.quality!=='auto'||index%2===0;
+      if(!shard.visible)return;
       const data = shard.userData.portalDebris, angle = data.angle + time * data.speed;
       shard.position.set(Math.sin(angle) * data.radius, data.height + Math.sin(time * 1.35 + data.phase) * .13, Math.cos(angle) * data.radius);
       shard.rotation.set(time * (.18 + index * .007), time * (.25 - index * .005), time * .12);
@@ -1508,7 +1517,7 @@ export class TabokTrue3DBoard {
       glow.scale.setScalar(pulse);
       glow.material.opacity = glow.userData.baseOpacity * (.86 + Math.sin(time * 2.6 + glow.userData.phase) * .14);
     });
-    const actorInterval = this.quality === 'lite' ? 66 : 33;
+    const actorInterval = this.quality === 'lite' ? 66 : this.quality === 'auto' ? 40 : 33;
     if (now - this.lastActorModelUpdateAt >= actorInterval) {
       this.actorRoot.children.forEach(actor => {
         const visual = actor.userData.visual3D;
