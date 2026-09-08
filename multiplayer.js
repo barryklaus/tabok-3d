@@ -2,7 +2,7 @@
 (() => {
   'use strict';
 
-  const VERSION = 'v0.62.0 Mobile Anchor · E1';
+  const VERSION = 'v0.63.0 Tablet Gateway · F1';
   const TOKEN_KEY = 'tabok-multiplayer-token';
   const NAME_KEY = 'tabok-multiplayer-name';
   const ACTIVE_ROOM_KEY = 'tabok-active-guest-room';
@@ -49,7 +49,6 @@
   let rejoinAttempts = 0;
   let currentHostId = '';
   let rejoining = false;
-  const nameTimers = new Map();
 
   const safe = value => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
   const cleanName = value => String(value || '').replace(/\s+/g, ' ').trim().slice(0, 18);
@@ -116,7 +115,7 @@
     setup.classList.remove('hidden');
     dialog.className = 'dialog mp-dialog';
     dialog.innerHTML = '<div class="eyebrow">Cross-platform multiplayer · alpha</div><h2>Gather at the Crossing</h2><p>One browser hosts the expedition. Friends on computers, tablets, or phones join with the room code. No account is required.</p>' +
-      '<div class="mp-alert">' + safe(message) + '</div><div class="mp-landing"><button class="mp-choice" id="mpHost"><b>Host a room</b><span>Create the room, choose its size, and start after every Traveler rolls initiative.</span></button><button class="mp-choice" id="mpJoin"><b>Join friends</b><span>Enter the host’s room code, claim a character slot, and rename your Traveler.</span></button></div>' +
+      '<div class="mp-alert">' + safe(message) + '</div><div class="mp-landing"><button class="mp-choice" id="mpHost"><b>Host a room</b><span>Create the room, choose its size, and begin after positions are cast automatically.</span></button><button class="mp-choice" id="mpJoin"><b>Join friends</b><span>Enter the room code, claim a character, save your name, and receive your position.</span></button></div>' +
       '<p class="mp-room-status">Online rooms require internet access. For the most reliable cross-device play, open this build from an HTTPS website such as GitHub Pages instead of directly from a ZIP.</p>'+relayMarkup() + engineConfigMarkup();
     document.getElementById('mpHost').onclick = () => createRoom();
     document.getElementById('mpJoin').onclick = () => renderJoin();
@@ -259,7 +258,7 @@
         if (seat) {
           seat.kind = 'human'; seat.owner = data.token; seat.ownerLabel = cleanName(data.label) || 'Traveler';
           seat.connected = true; seat.relayReady = !!data.relay; seat.customName = uniqueName(seat.ownerLabel, seat.slot);
-          resetInitiative();
+          seat.roll = null;
         }
       }
       if (seat) { seat.connected = true; seat.relayReady = !!data.relay; }
@@ -270,6 +269,7 @@
       }
       pushSystem((seat?.customName || cleanName(data.label) || 'A Traveler') + ' connected.');
       broadcastLobby();
+      scheduleInitiativeRolls();
       return;
     }
     const sender = connectionTokens.get(conn.peer);
@@ -286,6 +286,7 @@
       room = data.room;
       if (!isHost && room?.id) rememberGuestRoom(room.id);
       normalizeRoom();
+      const mine=ownSeat(token);if(mine?.customName){localDisplayName=mine.customName;localStorage.setItem(NAME_KEY,localDisplayName)}
       if (room.phase === 'lobby') {resetPortalVisuals();renderRoom();} else { setup.classList.add('hidden'); renderChat(); }
     } else if (data.type === 'game') {
       applyGameSnapshot(data.snapshot);
@@ -353,14 +354,15 @@
       seat.ownerLabel = cleanName(payload.label) || 'Traveler';
       seat.connected = ownerConnected(sender);
       seat.customName = uniqueName(seat.ownerLabel, seat.slot);
-      resetInitiative();
+      seat.roll = null;
       pushSystem(seat.ownerLabel + ' claimed ' + seat.slot + ' as ' + seat.customName + '.');
     } else if (action === 'release') {
       const seat = seatForSlot(payload.slot);
       if (!seat || seat.kind !== 'human' || (seat.owner !== sender && sender !== room.hostToken)) return;
       pushSystem(seat.customName + ' released ' + seat.slot + '.');
+      if (room.rolling === seat.slot) room.rolling = null;
       seat.kind = 'open'; seat.owner = null; seat.ownerLabel = ''; seat.connected = false; seat.roll = null;
-      resetInitiative();
+      scheduleInitiativeRolls();
     } else if (action === 'cpu' && sender === room.hostToken) {
       const seat = seatForSlot(payload.slot);
       if (!seat || room.seats.indexOf(seat) >= room.capacity || seat.kind === 'human') return;
@@ -368,7 +370,6 @@
       giveSeatFreeCharacter(seat);
       const character = CHARACTERS.find(c => c.id === seat.charId) || CHARACTERS[0];
       seat.customName = uniqueName(character.name, seat.slot);
-      resetInitiative();
       pushSystem('The host assigned ' + seat.slot + ' to CPU ' + seat.customName + '.');
     } else if (action === 'open' && sender === room.hostToken) {
       const seat = seatForSlot(payload.slot);
@@ -376,7 +377,7 @@
       pushSystem('CPU ' + seat.customName + ' left ' + seat.slot + ' open.');
       if (room.rolling === seat.slot) room.rolling = null;
       seat.kind = 'open'; seat.owner = null; seat.ownerLabel = ''; seat.connected = false; seat.roll = null;
-      resetInitiative();
+      scheduleInitiativeRolls();
     } else if (action === 'fillCPU' && sender === room.hostToken) {
       activeSeats().filter(seat => seat.kind === 'open').forEach(seat => {
         seat.kind = 'cpu'; seat.owner = null; seat.ownerLabel = 'CPU'; seat.connected = true; seat.roll = null;
@@ -384,7 +385,6 @@
         const character = CHARACTERS.find(c => c.id === seat.charId) || CHARACTERS[0];
         seat.customName = uniqueName(character.name, seat.slot);
       });
-      resetInitiative();
       pushSystem('The host filled every open slot with a CPU Traveler.');
     } else if (action === 'allCPU' && sender === room.hostToken) {
       activeSeats().forEach((seat, index) => {
@@ -407,7 +407,6 @@
       if (!name) return sendNotice(sender, 'Traveler names cannot be empty.');
       if (activeSeats().some(s => s !== seat && occupied(s) && s.customName.toLowerCase() === name.toLowerCase())) return sendNotice(sender, 'Every Traveler needs a unique name.');
       seat.customName = name;
-      seat.roll = null;
     } else if (action === 'character') {
       const seat = seatForSlot(payload.slot);
       const editable = seat && ((seat.kind === 'human' && seat.owner === sender) || (seat.kind === 'cpu' && sender === room.hostToken));
@@ -416,7 +415,6 @@
       const ch = CHARACTERS.find(c => c.id === payload.charId);
       seat.charId = ch.id;
       if (!seat.customName) seat.customName = ch.name;
-      seat.roll = null;
     } else if (action === 'roll') {
       const seat = seatForSlot(payload.slot);
       if (!seat || seat.kind !== 'human' || seat.owner !== sender || seat.roll !== null || room.rolling) return;
@@ -430,7 +428,7 @@
         room.rolling = null;
         pushSystem(seat.customName + ' locked starting position ' + seat.roll + '.');
         broadcastLobby();
-        scheduleCPURolls();
+        scheduleInitiativeRolls();
       }, 780);
       return;
     } else if (action === 'start' && sender === room.hostToken) {
@@ -439,7 +437,7 @@
       return;
     }
     broadcastLobby();
-    scheduleCPURolls();
+    scheduleInitiativeRolls();
   }
 
   function uniqueName(preferred, slot) {
@@ -450,12 +448,14 @@
     return (base + ' ' + n).slice(0, 18);
   }
 
-  function resetInitiative() { room.rolling = null; room.seats.forEach(s => s.roll = null); scheduleCPURolls(); }
+  function resetInitiative() { room.rolling = null; room.seats.forEach(s => s.roll = null); scheduleInitiativeRolls(); }
   function activeSeats() { return room.seats.slice(0, room.capacity); }
   function occupiedSeats() { return activeSeats().filter(occupied); }
   function humanSeats() { return activeSeats().filter(s => s.kind === 'human'); }
   function availableInitiativePositions() {
-    const count = occupiedSeats().length;
+    // Positions belong to the configured expedition size, so the first person
+    // can genuinely draw any still-available position instead of always 1.
+    const count = room.capacity;
     const locked = new Set(occupiedSeats().map(seat => seat.roll).filter(Number.isInteger));
     return Array.from({length:count}, (_, index) => index + 1).filter(position => !locked.has(position));
   }
@@ -463,21 +463,21 @@
     const available = availableInitiativePositions();
     return available.length ? available[Math.floor(Math.random() * available.length)] : null;
   }
-  function scheduleCPURolls() {
+  function scheduleInitiativeRolls() {
     if (!isHost || !room || room.phase !== 'lobby' || room.rolling) return;
-    const seat = occupiedSeats().find(candidate => candidate.kind === 'cpu' && candidate.roll === null);
+    const seat = occupiedSeats().find(candidate => candidate.roll === null);
     if (!seat) return;
     room.rolling = seat.slot;
     broadcastLobby();
     setTimeout(() => {
-      if (!room || room.phase !== 'lobby' || room.rolling !== seat.slot || seat.kind !== 'cpu') return;
+      if (!room || room.phase !== 'lobby' || room.rolling !== seat.slot || !occupied(seat)) return;
       const position = drawInitiativePosition();
       if (position === null) { room.rolling = null; broadcastLobby(); return; }
       seat.roll = position;
       room.rolling = null;
-      pushSystem('CPU ' + seat.customName + ' locked starting position ' + seat.roll + '.');
+      pushSystem((seat.kind === 'cpu' ? 'CPU ' : '') + seat.customName + ' locked starting position ' + seat.roll + '.');
       broadcastLobby();
-      scheduleCPURolls();
+      scheduleInitiativeRolls();
     }, 780);
   }
   function roomReady() {
@@ -495,7 +495,7 @@
     const availablePositions = availableInitiativePositions();
     const localSeat = ownSeat(token), localNeedsRoll = !!localSeat && localSeat.roll === null;
     const openCount = seats.filter(seat => seat.kind === 'open').length;
-    const lobbyGuide = '<div class="mp-start-path"><span class="'+(localSeat?'done':'current')+'"><b>1</b> Traveler claimed</span><span class="'+(localSeat?.roll!==null?'done':localSeat?'current':'')+'"><b>2</b> Roll starting position</span><span class="'+(roomReady()?'done':isHost?'current':'')+'"><b>3</b> Host begins</span></div>' + (localNeedsRoll?'<button class="primary mp-primary-roll" id="mpPrimaryRoll">Roll my starting position</button>':'');
+    const lobbyGuide = '<div class="mp-start-path"><span class="'+(localSeat?'done':'current')+'"><b>1</b> Traveler claimed</span><span class="'+(localSeat?.roll!==null?'done':localSeat?'current':'')+'"><b>2</b> Position rolls automatically</span><span class="'+(roomReady()?'done':isHost?'current':'')+'"><b>3</b> Host begins</span></div>' + (localNeedsRoll?'<div class="mp-auto-roll-note">'+(room.rolling===localSeat.slot?'Casting your position die…':'Your position roll is queued…')+'</div>':'');
     dialog.innerHTML = '<div class="eyebrow">Multiplayer lobby · ' + (isHost ? 'you are host' : 'connected guest') + '</div><h2>Choose your Traveler</h2><div class="room-code"><span>Room code</span><b>' + safe(roomCode(room.id)) + '</b><button id="mpCopyCode">Copy code</button></div>'+relayMarkup() +
       lobbyGuide +
       '<div class="room-settings"><label>Traveler slots<select id="mpCapacity" ' + (!isHost?'disabled':'') + '>' + [1,2,3,4,5,6].map(n => '<option ' + (room.capacity===n?'selected':'') + '>'+n+'</option>').join('') + '</select></label><label>Animation pace<select id="mpSpeed" ' + (!isHost?'disabled':'') + '><option value="fast" ' + (room.speed==='fast'?'selected':'') + '>Fast</option><option value="cinematic" ' + (room.speed==='cinematic'?'selected':'') + '>Cinematic</option><option value="instant" ' + (room.speed==='instant'?'selected':'') + '>Instant</option></select></label><label>Board quality<select id="mpQuality" ' + (!isHost?'disabled':'') + '><option value="full" ' + (room.quality==='full'?'selected':'') + '>High Fidelity 60</option><option value="auto" ' + (room.quality==='auto'?'selected':'') + '>Cinematic · highest quality</option><option value="ultra" ' + (room.quality==='ultra'?'selected':'') + '>Performance 60+</option><option value="lite" ' + (room.quality==='lite'?'selected':'') + '>Battery saver</option></select></label><label class="mp-auto-toggle"><input type="checkbox" id="mpAutoTreasure" '+(room.autoTreasureActions?'checked':'')+' '+(!isHost?'disabled':'')+'><span>Automate Take / Give / Steal / Grand Plunder</span></label></div>' +
@@ -506,7 +506,6 @@
     document.getElementById('mpQuality').onchange = e => lobbyAction('settings', {speed:room.speed, quality:e.target.value, autoTreasureActions:room.autoTreasureActions});
     document.getElementById('mpAutoTreasure').onchange = e => lobbyAction('settings', {speed:room.speed, quality:room.quality, autoTreasureActions:e.target.checked});
     document.getElementById('mpStart').onclick = () => lobbyAction('start');
-    const primaryRoll = document.getElementById('mpPrimaryRoll'); if (primaryRoll) primaryRoll.onclick = () => lobbyAction('roll', {slot:localSeat.slot});
     if (isHost) {
       document.getElementById('mpFillCPU').onclick = () => lobbyAction('fillCPU');
       document.getElementById('mpAllCPU').onclick = () => lobbyAction('allCPU');
@@ -515,11 +514,14 @@
     dialog.querySelectorAll('[data-release]').forEach(b => b.onclick = () => lobbyAction('release', {slot:b.dataset.release}));
     dialog.querySelectorAll('[data-cpu]').forEach(b => b.onclick = () => lobbyAction('cpu', {slot:b.dataset.cpu}));
     dialog.querySelectorAll('[data-open]').forEach(b => b.onclick = () => lobbyAction('open', {slot:b.dataset.open}));
-    dialog.querySelectorAll('[data-roll]').forEach(b => b.onclick = () => lobbyAction('roll', {slot:b.dataset.roll}));
     dialog.querySelectorAll('[data-seat-name]').forEach(input => {
-      const commit=()=>{clearTimeout(nameTimers.get(input.dataset.seatName));nameTimers.delete(input.dataset.seatName);lobbyAction('name',{slot:input.dataset.seatName,value:input.value})};
-      input.oninput=()=>{clearTimeout(nameTimers.get(input.dataset.seatName));nameTimers.set(input.dataset.seatName,setTimeout(commit,420))};
-      input.onchange=commit;
+      input.oninput=()=>input.closest('.mp-seat-name-edit')?.classList.add('dirty');
+      input.onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();input.parentElement.querySelector('[data-save-name]')?.click();input.blur()}};
+    });
+    dialog.querySelectorAll('[data-save-name]').forEach(button => button.onclick = () => {
+      const input=button.parentElement.querySelector('[data-seat-name]'), value=cleanName(input.value);
+      if(!value){showLobbyAlert('Enter a Traveler name first.');input.focus();return}
+      lobbyAction('name',{slot:button.dataset.saveName,value});
     });
     dialog.querySelectorAll('[data-seat-char]').forEach(select => select.onchange = () => lobbyAction('character', {slot:select.dataset.seatChar, charId:select.value}));
     renderChat();
@@ -533,12 +535,17 @@
     const ch = CHARACTERS.find(c => c.id === seat.charId) || CHARACTERS[0];
     const options = CHARACTERS.map(c => '<option value="'+c.id+'" '+(c.id===seat.charId?'selected':'')+' '+(charUsed(c.id,seat.slot)?'disabled':'')+'>'+safe(c.name)+' · '+safe(c.title)+'</option>').join('');
     const action = open ? '<button data-claim="'+seat.slot+'">Claim</button>' + (isHost ? '<button data-cpu="'+seat.slot+'">Add CPU</button>' : '') : cpu ? (isHost ? '<button data-open="'+seat.slot+'">Open slot</button>' : '<small>Host CPU</small>') : (mine || isHost ? '<button data-release="'+seat.slot+'">Release</button>' : '<small>'+(seat.connected?'Connected':'Reconnecting')+'</small>');
-    const roll = seat.roll === null ? (cpu ? '<small>'+(room.rolling===seat.slot?'CPU rolling…':'CPU automatic')+'</small>' : mine ? '<button data-roll="'+seat.slot+'" '+(room.rolling?'disabled':'')+'>'+(room.rolling===seat.slot?'Rolling…':'Roll position')+'</button>' : '<small>'+(open?'Unassigned':'Awaiting roll')+'</small>') : '<div class="initiative-die" title="Starting position '+seat.roll+'"><span>'+seat.roll+'</span></div>';
-    return '<section class="mp-seat '+(mine?'mine ':'')+(cpu?'cpu ':'')+(open?'unclaimed':'')+'" style="--seat-color:'+ch.color+'"><div class="mp-seat-portrait" style="--portrait-x:'+portraitX(ch.row)+';--portrait-y:'+portraitY(ch.row)+'"></div><div class="mp-seat-main"><strong>'+seat.slot+' · '+safe(cpu?'CPU':seat.ownerLabel || 'Open slot')+'</strong><small>'+(cpu?'host-controlled companion':seat.owner?(seat.connected?'online human':'slot reserved'):'choose or assign this entrance')+'</small><input data-seat-name="'+seat.slot+'" value="'+safe(seat.customName)+'" maxlength="18" '+(!editable?'disabled':'')+' aria-label="Custom Traveler name"><select data-seat-char="'+seat.slot+'" '+(!editable?'disabled':'')+'>'+options+'</select></div><div class="mp-seat-actions">'+action+roll+'</div></section>';
+    const roll = seat.roll === null ? '<small>'+(room.rolling===seat.slot?'Position die rolling…':open?'Unassigned':'Automatic roll queued')+'</small>' : '<div class="initiative-die" title="Starting position '+seat.roll+'"><span>'+seat.roll+'</span></div>';
+    const nameEditor='<div class="mp-seat-name-edit"><input data-seat-name="'+seat.slot+'" value="'+safe(seat.customName)+'" maxlength="18" autocomplete="off" enterkeyhint="done" '+(!editable?'disabled':'')+' aria-label="Custom Traveler name">'+(editable?'<button type="button" data-save-name="'+seat.slot+'">Save</button>':'')+'</div>';
+    return '<section class="mp-seat '+(mine?'mine ':'')+(cpu?'cpu ':'')+(open?'unclaimed':'')+'" style="--seat-color:'+ch.color+'"><div class="mp-seat-portrait" style="--portrait-x:'+portraitX(ch.row)+';--portrait-y:'+portraitY(ch.row)+'"></div><div class="mp-seat-main"><strong>'+seat.slot+' · '+safe(cpu?'CPU':seat.ownerLabel || 'Open slot')+'</strong><small>'+(cpu?'host-controlled companion':seat.owner?(seat.connected?'online human':'slot reserved'):'choose or assign this entrance')+'</small>'+nameEditor+'<select data-seat-char="'+seat.slot+'" '+(!editable?'disabled':'')+'>'+options+'</select></div><div class="mp-seat-actions">'+action+roll+'</div></section>';
   }
 
   function lobbyAction(action, payload = {}) {
-    if (isHost) handleLobbyAction(token, action, payload);
+    if(action==='name') payload.value=cleanName(payload.value);
+    if (isHost) {
+      handleLobbyAction(token, action, payload);
+      const mine=ownSeat(token);if(action==='name'&&mine?.customName){localDisplayName=mine.customName;localStorage.setItem(NAME_KEY,localDisplayName)}
+    }
     else sendToHost('lobby', {action, payload});
   }
   function showLobbyAlert(text) { const host = document.getElementById('mpLobbyAlert'); if (host) host.textContent = text; }
@@ -793,7 +800,7 @@
     if(!room)return renderLanding();
     if(room.phase==='game'&&isHost){
       if(!confirm('Return every connected player to the lobby and abandon this expedition?'))return;
-      clearTimeout(cpuTimer);clearTimeout(portalRevealTimer);clearTimeout(actionAutoTimer);clearTimeout(ruinEventTimer);busy=false;resetPortalVisuals();game=null;room.phase='lobby';room.seats.forEach(s=>s.roll=null);broadcastLobby();renderRoom();scheduleCPURolls();pauseAmbient(true);
+      clearTimeout(cpuTimer);clearTimeout(portalRevealTimer);clearTimeout(actionAutoTimer);clearTimeout(ruinEventTimer);busy=false;resetPortalVisuals();game=null;room.phase='lobby';room.seats.forEach(s=>s.roll=null);broadcastLobby();renderRoom();scheduleInitiativeRolls();pauseAmbient(true);
     }else if(room.phase==='game'){showRoomNotice('Only the host can reset the expedition.');}
     else renderRoom();
   };

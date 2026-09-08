@@ -105,7 +105,7 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;ba
 @media(max-width:700px){.top{height:62px}.brand strong{font-size:26px}.top-status{min-width:0;width:46%;left:47%}.layout{display:block}.side{padding:0 9px 12px}.traveler{width:calc(50% - 3px)}.true3d-active .true3d-hud{opacity:.9}}
 
 /* v0.47.1 — true full-screen mobile tabletop, centered on the Portal. */
-@media(max-width:900px){
+@media(max-width:900px), (max-width:1180px) and (pointer:coarse){
   html,body{width:100%;height:100%;overflow:hidden;overscroll-behavior:none;background:#030203}
   body:before{display:none}
   .shell{width:100%;height:100dvh;min-height:0;overflow:hidden;grid-template-rows:54px minmax(0,1fr)}
@@ -131,11 +131,19 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;ba
   .turn-roll-overlay{z-index:60;padding:max(10px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left))}
   .overlay .dialog{max-height:calc(100dvh - 20px);overflow:auto}
 }
-@media(max-width:900px) and (orientation:landscape){
+@media(max-width:900px) and (orientation:landscape), (max-width:1180px) and (pointer:coarse) and (orientation:landscape){
   .shell{grid-template-rows:48px minmax(0,1fr)}.top{height:48px;min-height:48px}.brand strong{font-size:21px}
   .guide.mp-guide{top:7px;width:min(280px,42vw)}
   .side{left:auto;top:7px;right:max(7px,env(safe-area-inset-right));bottom:max(7px,env(safe-area-inset-bottom));width:min(330px,38vw)!important;max-height:none;padding:8px!important}
   .side .turn-head h1{font-size:18px}.side>.dice{height:48px;min-height:48px}.side .die{min-height:48px!important}.side>.event{max-height:45px}.replay-highlight{right:calc(min(330px,38vw) + 16px)}
+}
+
+/* v0.63.0 — portal-centered iPad composition. */
+@media (min-width:901px) and (max-width:1180px) and (pointer:coarse){
+  .top{padding-left:max(14px,env(safe-area-inset-left));padding-right:max(14px,env(safe-area-inset-right))}
+  .brand strong{font-size:27px}.guide.mp-guide{width:min(320px,34vw)}
+  .side{width:min(350px,36vw)!important}.side .turn-head h1{font-size:21px}
+  .side #controls>button{min-height:45px!important}.board-frame,.true3d-active .board-frame{min-height:100%!important}
 }
 
 /* v0.47.2 — Portal judgment is composed for a phone, not scaled down from desktop. */

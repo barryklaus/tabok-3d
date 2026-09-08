@@ -1,6 +1,14 @@
 # TABOK — True 3D Board Alpha
 
-Version: **v0.62.0 — Mobile Anchor · 2026.09.08.E1**
+Version: **v0.63.0 — Tablet Gateway · 2026.09.08.F1**
+
+## v0.63.0 — Tablet Gateway
+
+- Character names now use a deliberate Save action, preventing lobby refreshes from interrupting typing on touch devices.
+- Claiming a Traveler automatically casts and locks an available starting-position result.
+- Existing position results survive later claims, character changes, and renames.
+- iPad uses the portal-centered full-screen tabletop layout and a Safari-safe 3D tile material path.
+- A lost mobile GPU context immediately reveals the compatibility board until 3D rendering recovers.
 
 ## v0.62.0 — Mobile Anchor
 

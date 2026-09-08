@@ -345,6 +345,7 @@ export class TabokTrue3DBoard {
     this.lastActorModelUpdateAt = 0;
     this.lastSpeechUpdateAt = 0;
     this.reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.tabletProfile = matchMedia('(max-width:1180px) and (pointer:coarse)').matches;
     this.framingKey = '';
     this.suspended = document.hidden;
     this.ready = this.init();
@@ -393,6 +394,8 @@ export class TabokTrue3DBoard {
     this.canvas.addEventListener('webglcontextlost', event => {
       event.preventDefault();
       this.suspended = true;
+      document.documentElement.classList.remove('true3d-active');
+      document.documentElement.classList.add('board-plate-mode');
       document.documentElement.classList.add('gpu-context-lost');
       window.dispatchEvent(new CustomEvent('tabok-gpu-paused'));
     });
@@ -401,6 +404,8 @@ export class TabokTrue3DBoard {
       this.lastFrameAt = performance.now();
       this.frameTimes.length = 0;
       document.documentElement.classList.remove('gpu-context-lost');
+      document.documentElement.classList.remove('board-plate-mode');
+      document.documentElement.classList.add('true3d-active');
       this.resize();
       window.dispatchEvent(new CustomEvent('tabok-gpu-restored'));
     });
@@ -595,7 +600,8 @@ export class TabokTrue3DBoard {
     for (const batch of batches.values()) {
       const mesh = new THREE.InstancedMesh(
         geometries[batch.shape][batch.variant],
-        [sideMaterials[batch.type], topMaterials[batch.type], sideMaterials[batch.type]],
+        // Older iPad Safari can drop multi-material instanced meshes entirely.
+        this.tabletProfile ? topMaterials[batch.type] : [sideMaterials[batch.type], topMaterials[batch.type], sideMaterials[batch.type]],
         batch.cells.length
       );
       const instanceIds = [];
@@ -1279,7 +1285,7 @@ export class TabokTrue3DBoard {
   applyResponsiveFraming(force = false) {
     if (!this.camera || !this.controls) return;
     const rect = this.canvas.parentElement.getBoundingClientRect();
-    const mobile = matchMedia('(max-width: 900px)').matches;
+    const mobile = matchMedia('(max-width:900px), (max-width:1180px) and (pointer:coarse)').matches;
     const portrait = rect.height > rect.width * 1.08;
     const key = mobile ? (portrait ? 'mobile-portrait' : 'mobile-landscape') : 'desktop';
     if (!force && key === this.framingKey) return;
