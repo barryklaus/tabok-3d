@@ -21,8 +21,7 @@ export class TabokBustPreview {
     this.canvas.setAttribute('aria-hidden','true');
     this.scene=new THREE.Scene();
     this.camera=new THREE.PerspectiveCamera(25,1,.1,20);
-    this.camera.position.set(0,2.78,5.15);
-    this.camera.lookAt(0,2.72,0);
+    this.camera.position.set(0,2.8,5.15);
     this.renderer=new THREE.WebGLRenderer({canvas:this.canvas,alpha:true,antialias:true,powerPreference:'high-performance'});
     this.renderer.outputColorSpace=THREE.SRGBColorSpace;
     this.renderer.toneMapping=THREE.ACESFilmicToneMapping;
@@ -45,7 +44,7 @@ export class TabokBustPreview {
     if(this.id===id&&this.model)return;
     if(this.model){this.scene.remove(this.model);disposeModel(this.model)}
     this.id=id;this.model=createSculptedTraveler(id);this.model.scale.setScalar(1.12);this.model.position.set(0,.02,0);this.model.rotation.y=.08;
-    this.scene.add(this.model);this.clock.start();this.renderOnce();this.requestFrame();
+    this.scene.add(this.model);this.frameModel();this.clock.start();this.renderOnce();this.requestFrame();
   }
 
   hide(){this.visible=false}
@@ -53,7 +52,23 @@ export class TabokBustPreview {
   resize(){
     const rect=this.canvas.parentElement?.getBoundingClientRect();if(!rect)return;
     const width=Math.max(1,Math.round(rect.width)),height=Math.max(1,Math.round(rect.height));
-    this.renderer.setSize(width,height,false);this.camera.aspect=width/height;this.camera.updateProjectionMatrix();this.renderOnce();
+    this.renderer.setSize(width,height,false);this.camera.aspect=width/height;this.frameModel();this.renderOnce();
+  }
+
+  frameModel(){
+    if(!this.model)return;
+    this.model.updateWorldMatrix(true,true);
+    const box=new THREE.Box3().setFromObject(this.model),size=box.getSize(new THREE.Vector3());
+    if(!Number.isFinite(size.y)||size.y<=0)return;
+    // Crop below the chest, but calculate the camera from each sculpture's
+    // actual hair/head bounds so tall hairstyles never push the face away.
+    const lower=box.min.y+size.y*.43,upper=box.max.y+size.y*.035;
+    const target=new THREE.Vector3((box.min.x+box.max.x)*.5,(lower+upper)*.5,(box.min.z+box.max.z)*.5);
+    const visibleHeight=upper-lower,visibleWidth=size.x*1.08;
+    const halfFov=THREE.MathUtils.degToRad(this.camera.fov*.5);
+    const distance=Math.max(visibleHeight/(2*Math.tan(halfFov)),visibleWidth/(2*Math.tan(halfFov)*Math.max(.5,this.camera.aspect)))*1.06;
+    this.camera.position.set(target.x,target.y+.015,target.z+distance);
+    this.camera.lookAt(target);this.camera.updateProjectionMatrix();
   }
 
   requestFrame(){if(!this.frameRequest)this.frameRequest=requestAnimationFrame(this.boundFrame)}

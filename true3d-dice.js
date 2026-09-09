@@ -170,14 +170,27 @@ export class TabokDice3D {
   }
 
   makeTray() {
-    const tray = new THREE.Mesh(new THREE.CylinderGeometry(5.4, 5.7, .42, 64), new THREE.MeshStandardMaterial({ color: 0x100a0d, roughness: .72, metalness: .15 }));
-    tray.position.y = -.28; tray.receiveShadow = true; this.scene.add(tray);
-    const rim = new THREE.Mesh(new THREE.TorusGeometry(4.85, .13, 10, 96), new THREE.MeshStandardMaterial({ color: 0xb27a3e, emissive: 0x5b2712, emissiveIntensity: .35, roughness: .42, metalness: .72 }));
-    rim.rotation.x = Math.PI / 2; rim.position.y = -.04; this.scene.add(rim);
-    for (let index = 0; index < 3; index++) {
-      const rune = new THREE.Mesh(new THREE.TorusGeometry(2.65 + index * .55, .018, 5, 72), new THREE.MeshBasicMaterial({ color: index % 2 ? 0x9b55d8 : 0xd7a755, transparent: true, opacity: .32 }));
-      rune.rotation.x = Math.PI / 2; rune.position.y = -.045; this.scene.add(rune);
+    const altar=new THREE.Group();altar.name='Celestial dice instrument';this.scene.add(altar);
+    const tray = new THREE.Mesh(new THREE.CylinderGeometry(4.7,4.76,.12,64),new THREE.MeshStandardMaterial({color:0x080706,roughness:.9,metalness:.08}));
+    tray.position.y=-.09;tray.receiveShadow=true;altar.add(tray);
+    const metal=new THREE.MeshStandardMaterial({color:0x8c6b3d,roughness:.58,metalness:.55});
+    const rim=new THREE.Mesh(new THREE.TorusGeometry(4.46,.025,5,96),metal);
+    rim.rotation.x=Math.PI/2;rim.position.y=-.018;altar.add(rim);
+    for(const radius of[2.72,3.58]){
+      const orbit=new THREE.Mesh(new THREE.TorusGeometry(radius,.009,3,96),new THREE.MeshBasicMaterial({color:0xb89658,transparent:true,opacity:.28}));
+      orbit.rotation.x=Math.PI/2;orbit.position.y=-.014;altar.add(orbit);
     }
+    const points=[];
+    for(let index=0;index<24;index++){
+      const angle=index/24*Math.PI*2,inner=index%6===0?4.12:4.25,outer=4.42;
+      points.push(new THREE.Vector3(Math.cos(angle)*inner,-.008,Math.sin(angle)*inner),new THREE.Vector3(Math.cos(angle)*outer,-.008,Math.sin(angle)*outer));
+    }
+    for(let index=0;index<4;index++){
+      const angle=index*Math.PI/2,radius=3.58,x=Math.cos(angle)*radius,z=Math.sin(angle)*radius,s=.12;
+      points.push(new THREE.Vector3(x,-.006,z-s),new THREE.Vector3(x+s,-.006,z),new THREE.Vector3(x+s,-.006,z),new THREE.Vector3(x,-.006,z+s),new THREE.Vector3(x,-.006,z+s),new THREE.Vector3(x-s,-.006,z),new THREE.Vector3(x-s,-.006,z),new THREE.Vector3(x,-.006,z-s));
+    }
+    const geometry=new THREE.BufferGeometry().setFromPoints(points);
+    altar.add(new THREE.LineSegments(geometry,new THREE.LineBasicMaterial({color:0xc3a064,transparent:true,opacity:.48})));
   }
 
   supports(specs) {

@@ -126,12 +126,12 @@
   <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js","three/addons/":"./vendor/addons/"}}</script>
   <link rel="stylesheet" href="ritual-redesign.css?v=20260905A3">
   <link rel="stylesheet" href="portal-events.css?v=20260907I1">
-  <link rel="stylesheet" href="celestial-ui.css?v=20260908D1">
+  <link rel="stylesheet" href="celestial-ui.css?v=20260909G1">
   <script src="portal-events.js?v=20260907G4"></script>
 </head>
 <body>
   <div class="shell">
-    <header class="top"><div class="brand"><strong>TABOK</strong><span>The Crossing · True 3D Board</span><small class="build-label">v0.63.0 TABLET GATEWAY · Build 2026.09.08.F1</small></div><small class="perf-meter" id="perfMeter" title="Live animation frame rate">FPS —</small><div class="network-pill" id="networkPill">OFFLINE</div><div class="top-status"><b id="roundTop">New expedition</b><span id="phaseTop" class="webgl-status">Raising the 3D ruins…</span></div><button class="new-game" id="newGame">Room</button></header>
+    <header class="top"><div class="brand"><strong>TABOK</strong><span>The Crossing · True 3D Board</span><small class="build-label">v0.64.0 STARFIELD INSTRUMENT · Build 2026.09.09.G1</small></div><small class="perf-meter" id="perfMeter" title="Live animation frame rate">FPS —</small><div class="network-pill" id="networkPill">OFFLINE</div><div class="top-status"><b id="roundTop">New expedition</b><span id="phaseTop" class="webgl-status">Raising the 3D ruins…</span></div><button class="new-game" id="newGame">Room</button></header>
     <main class="layout">
       <aside class="guide" aria-label="How to play TABOK">
         <div class="character-preview" id="characterPreview"><div class="preview-caption"><strong>Choose a Traveler</strong><span>Live sculpted presence</span></div></div>
@@ -394,7 +394,7 @@
     async function initGPUBoard(){
       const status=document.getElementById('phaseTop');
       try{
-        const{TabokTrue3DBoard}=await import('./true3d-board.js?v=20260908F1'),cells3D=[];
+        const{TabokTrue3DBoard}=await import('./true3d-board.js?v=20260909G1'),cells3D=[];
         Object.entries(COLUMNS).forEach(([qValue,col])=>{const q=Number(qValue);[...col.cells].forEach((type,i)=>cells3D.push({q,r:col.r0+i,type}))});
         webglBoard=new TabokTrue3DBoard(document.getElementById('webglBoard'),{
           cells:cells3D,
@@ -404,11 +404,11 @@
           onPortal:()=>{if(!game||game.phase!=='move'||active()?.controller==='cpu')return;const plan=humanDestinationPlans(active(),game.turn.remaining);if(game.turn.remaining>=1&&gateway.has(active().pos))choosePortal(false);else if(plan.routes.has('PORTAL'))chooseHumanDestination('PORTAL')}
         });
         await webglBoard.ready;
-        try{const{TabokBustPreview}=await import('./character-bust-preview.js?v=20260908F1');bustPreview=new TabokBustPreview();els.preview.dataset.previewKey='';renderPreview()}catch(previewError){console.warn('TABOK sculpted bust preview unavailable; retaining the lightweight portrait fallback.',previewError)}
+        try{const{TabokBustPreview}=await import('./character-bust-preview.js?v=20260909G1');bustPreview=new TabokBustPreview();els.preview.dataset.previewKey='';renderPreview()}catch(previewError){console.warn('TABOK sculpted bust preview unavailable; retaining the lightweight portrait fallback.',previewError)}
         const reset=document.getElementById('reset3DCamera'),buttons=document.createElement('div'),left=document.createElement('button'),right=document.createElement('button');
         buttons.className='true3d-hud-buttons';left.type=right.type='button';left.id='orbit3DLeft';right.id='orbit3DRight';left.textContent='↶';right.textContent='↷';left.title='Rotate camera left';right.title='Rotate camera right';reset.before(left);reset.after(right);reset.parentElement.classList.add('true3d-hud-controls');
         reset.onclick=()=>webglBoard.resetCamera();left.onclick=()=>webglBoard.orbitCamera(-1);right.onclick=()=>webglBoard.orbitCamera(1);
-        try{const{TabokDice3D}=await import('./true3d-dice.js?v=20260908C1');dice3D=new TabokDice3D(els.turnRollDice)}catch(diceError){console.warn('TABOK physical dice unavailable; using the flat dice fallback.',diceError)}
+        try{const{TabokDice3D}=await import('./true3d-dice.js?v=20260909G1');dice3D=new TabokDice3D(els.turnRollDice)}catch(diceError){console.warn('TABOK physical dice unavailable; using the flat dice fallback.',diceError)}
         const cameraCanvas=document.getElementById('webglBoard'),cameraHelp=document.querySelector('.true3d-hud>span');
         cameraCanvas.setAttribute('aria-label','Interactive 3D TABOK board. Hold left mouse and drag to orbit. Hold right mouse and drag to move the camera. Use the wheel or pinch to zoom.');
         if(cameraHelp)cameraHelp.innerHTML='<b>3D CAMERA</b> Left-drag to orbit · Right-drag to move · Wheel/pinch to zoom';
@@ -422,7 +422,7 @@
       }
     }
     function newState(count,modes,charIds,speed='fast',quality='full',autoTreasureActions=false){const tier=count<=2?3:count<=4?6:9,monsterCap=3;return{count,total:tier,speed,quality,autoTreasureActions,round:1,phase:'roll',players:PLAYER_DATA.slice(0,count).map((p,i)=>{const ch=CHARACTERS.find(c=>c.id===(charIds[i]||CHARACTERS[i].id))||CHARACTERS[i];return{p:p[0],charId:ch.id,name:ch.name,title:ch.title,color:ch.color,spriteRow:ch.row,start:p[2],pos:p[2],strategy:ch.strategy,controller:modes[i]||'human',inventory:[0,0,0],life:4,shield:false,armor:false,rune:false,runeOrigin:null,resolve:1,lastBreathUsed:false,status:'active',finish:null}}),monsters:[],monsterCap,supply:[tier,tier,tier],removed:[0,0,0],equipment:new Map([['-3,8',['S']],['6,8',['S']],['-3,17',['S']],['3,5',['A']],['-6,14',['A']],['3,14',['A']]]),runes:new Map(RUNE_SITES.map(id=>[id,1])),current:0,acted:new Set(),turn:null,history:[],finishes:[],finishPlace:0,rejections:0,reckoningAvailable:true,autoMonsters:false,monsterRoll:null,monsterActing:null,pendingPortal:null,triviaSeen:[],lastBreathSeen:[]}}
-    function active(){return game.players[game.current]}function soundForLog(text){const audio=window.TabokAudio;if(!audio)return;if(/CROSSED|crossed through/i.test(text))audio.play('cross');else if(/rejected|rejection/i.test(text))audio.play('reject');else if(/Major Monster|RECKONING/i.test(text))audio.play('major');else if(/lost \d+ Life|dies|died|instant death/i.test(text))audio.play(/dies|died|death/i.test(text)?'death':'damage');else if(/Shield absorbed|blocked/i.test(text))audio.play('shield');else if(/Grand Plunder|stole/i.test(text))audio.play('steal');else if(/gave a/i.test(text))audio.play('give');else if(/took a/i.test(text))audio.play('take');else if(/Rune Die|Riftwalk|Wild Surge|Soul Exchange/i.test(text))audio.play('rune');else if(/Portal|Judgment/i.test(text))audio.play('portal');else if(/Monster rolled|M\d rolled/i.test(text))audio.play('monster')}function addLog(text){game.history.push({round:game.round,text});els.event.textContent=text;soundForLog(text);renderHistory()}
+    function active(){return game?.players?.[game.current]}function soundForLog(text){const audio=window.TabokAudio;if(!audio)return;if(/CROSSED|crossed through/i.test(text))audio.play('cross');else if(/rejected|rejection/i.test(text))audio.play('reject');else if(/Major Monster|RECKONING/i.test(text))audio.play('major');else if(/lost \d+ Life|dies|died|instant death/i.test(text))audio.play(/dies|died|death/i.test(text)?'death':'damage');else if(/Shield absorbed|blocked/i.test(text))audio.play('shield');else if(/Grand Plunder|stole/i.test(text))audio.play('steal');else if(/gave a/i.test(text))audio.play('give');else if(/took a/i.test(text))audio.play('take');else if(/Rune Die|Riftwalk|Wild Surge|Soul Exchange/i.test(text))audio.play('rune');else if(/Portal|Judgment/i.test(text))audio.play('portal');else if(/Monster rolled|M\d rolled/i.test(text))audio.play('monster')}function addLog(text){game.history.push({round:game.round,text});els.event.textContent=text;soundForLog(text);renderHistory()}
     function lightweightEffects(){return document.documentElement.classList.contains('lite-effects')||matchMedia('(prefers-reduced-motion: reduce)').matches}
     function focusCamera(pos,kind='focus',duration=900){if(webglBoard?.isTrue3D||!pos||!els.boardFrame||game?.quality==='ultra')return Promise.resolve();const c=center(pos),origin=(c.x/1888*100).toFixed(2)+'% '+(c.y/1265*100).toFixed(2)+'%',scale=lightweightEffects()?1.018:kind==='major'?1.095:1.055,ms=timing(duration,'fx');els.boardFrame.style.transformOrigin=origin;const animation=els.boardFrame.animate([{transform:'scale(1)'},{transform:'scale('+scale+')',offset:.42},{transform:'scale('+scale+')',offset:.7},{transform:'scale(1)'}],{duration:ms,easing:'cubic-bezier(.22,.72,.25,1)'});return animation.finished.catch(()=>{})}
     function impactFrame(kind='damage',label='Impact'){if(!els.impact)return;els.impact.className='impact-fx';void els.impact.offsetWidth;els.impactLabel.textContent=label;els.impact.className='impact-fx '+kind+' active';setTimeout(()=>els.impact.className='impact-fx',timing(760,'fx'))}
@@ -776,7 +776,7 @@
   </script>
   <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
   <script src="network-config.js?v=20260903U1"></script>
-  <script src="multiplayer.js?v=20260908F1"></script>
+  <script src="multiplayer.js?v=20260909G1"></script>
   <script src="ritual-redesign.js?v=20260905A3"></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createCosmicSanctuary } from './cosmic-sanctuary.js?v=20260908E1';
+import { createCosmicSanctuary } from './cosmic-sanctuary.js?v=20260909G1';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createTravelerPilot } from './character-3d-travelers.js?v=20260907G4';
 import { createMonsterPilot } from './monster-3d-models.js?v=20260908A1';

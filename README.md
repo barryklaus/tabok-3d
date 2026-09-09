@@ -1,6 +1,18 @@
 # TABOK — True 3D Board Alpha
 
-Version: **v0.63.0 — Tablet Gateway · 2026.09.08.F1**
+Version: **v0.64.0 — Starfield Instrument · 2026.09.09.G1**
+
+## v0.64.0 — Starfield Instrument
+
+- Removed the global circular/vertical guide overlay and replaced bright roster
+  quantity badges with tiny engraved counts.
+- The sculpted Traveler preview now frames every model from chest to head using
+  its measured bounds, keeping faces and tall hairstyles visible.
+- The physical dice land on a thin obsidian celestial instrument with antique-
+  bronze hairlines, compass ticks, and restrained diamond nodes.
+- Replaced the purple nebula sky image with a memory-scaled three-depth field:
+  baked distant noise-stars, one midground star texture, and ten camera-facing
+  close-star sprites. It remains static and adds no animation loop.
 
 ## v0.63.0 — Tablet Gateway
 
