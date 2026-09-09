@@ -87,10 +87,19 @@ export function createCosmicSanctuary(scene, stoneMaps) {
     motion.push({pos:new THREE.Vector3(Math.sin(angle)*radius,-7+random()*11,Math.cos(angle)*radius),phase:random()*6.28,scale:.25+random()*1.45,rotation:new THREE.Euler(random()*3,random()*3,random()*3)});
   }
   rocks.instanceMatrix.setUsage(THREE.DynamicDrawUsage);rocks.frustumCulled=false;root.add(rocks);
-  const blocks=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),stone,120);let count=0;
+  const blocks=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),stone,180);let count=0;
   for(let index=0;index<12;index++){
     const angle=index/12*Math.PI*2+.12,radius=16.1+random()*.8,x=Math.sin(angle)*radius,z=Math.cos(angle)*radius;
-    for(let level=0;level<4;level++){object.position.set(x+level*.045,level*.75-.3,z);object.rotation.set(.025,angle,.035);object.scale.set(level?.55:.95,.7,level?.65:1.05);object.updateMatrix();blocks.setMatrixAt(count++,object.matrix)}
+    const style=index%4,towers=style===2?2:1;
+    for(let tower=0;tower<towers;tower++){
+      const levels=style===0?6:style===1?3:style===2?4:5,lateral=towers===2?(tower?1:-1)*.58:0;
+      for(let level=0;level<levels;level++){
+        const taper=1-level*(style===0?.065:.035),lean=style===3?level*.095:0;
+        object.position.set(x+Math.cos(angle)*lateral+Math.sin(angle)*lean,level*(style===0?.68:.61)-.3,z-Math.sin(angle)*lateral+Math.cos(angle)*lean);
+        object.rotation.set(style===3?.035*level:.025,angle+(random()-.5)*.055,style===1&&level===levels-1?.19:.035);
+        object.scale.set((style===0?.46:.58)*taper,style===0?.64:.57,(style===1?.86:.64)*taper);object.updateMatrix();blocks.setMatrixAt(count++,object.matrix);
+      }
+    }
     for(let rubble=0;rubble<6;rubble++){object.position.set(x+(random()-.5)*2.5,-.85+random()*.35,z+(random()-.5)*2.5);object.rotation.set(random()*.5,random()*6.28,random()*.3);object.scale.set(.35+random()*.65,.25+random()*.4,.4+random()*.6);object.updateMatrix();blocks.setMatrixAt(count++,object.matrix)}
   }
   blocks.count=count;blocks.instanceMatrix.needsUpdate=true;blocks.receiveShadow=true;root.add(blocks);

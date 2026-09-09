@@ -1,10 +1,10 @@
 import * as THREE from 'three';
-import { createCosmicSanctuary } from './cosmic-sanctuary.js?v=20260909G1';
+import { createCosmicSanctuary } from './cosmic-sanctuary.js?v=20260909H1';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createTravelerPilot } from './character-3d-travelers.js?v=20260907G4';
 import { createMonsterPilot } from './monster-3d-models.js?v=20260908A1';
 import { PortalCinematics } from './portal-cinematics.js?v=20260908A1';
-import { makeRuinStoneMaps, makeWornHexGeometry, makeRuinFoundation, makeContactShadow } from './ruin-board-art.js?v=20260908E1';
+import { makeRuinStoneMaps, makeWornHexGeometry, makeRuinFoundation, makeContactShadow } from './ruin-board-art.js?v=20260909H1';
 
 const SQRT3 = Math.sqrt(3);
 const HEX_RADIUS = .72;
@@ -154,7 +154,7 @@ function makeStoneHeightTexture(size = 256) {
 
 function tileVariantFor(q, r) {
   // Stable on every client, so multiplayer boards remain visually identical.
-  return Math.abs(q * 17 + r * 31 + q * r * 7) % 6;
+  return Math.abs(q*97+r*193+q*r*53+q*q*11+r*r*7)%18;
 }
 
 const PORTAL_VERTEX = `
@@ -577,9 +577,9 @@ export class TabokTrue3DBoard {
       });
     }
     const geometries = {
-      playable: Array.from({ length: 6 }, (_, v) => makeWornHexGeometry(HEX_RADIUS * .988, .18, v)),
-      blocked: Array.from({ length: 6 }, (_, v) => makeWornHexGeometry(HEX_RADIUS * .988, .28, v)),
-      entry: Array.from({ length: 6 }, (_, v) => makeWornHexGeometry(HEX_RADIUS, .24, v))
+      playable:Array.from({length:18},(_,v)=>makeWornHexGeometry(HEX_RADIUS*.988,.18,v)),
+      blocked:Array.from({length:18},(_,v)=>makeWornHexGeometry(HEX_RADIUS*.988,.28,v)),
+      entry:Array.from({length:18},(_,v)=>makeWornHexGeometry(HEX_RADIUS,.24,v))
     };
     // Each tile used to be a separate mesh and shadow caster. Grouping equal
     // tiles into instanced batches preserves every textured hex while reducing

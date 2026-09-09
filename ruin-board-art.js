@@ -87,18 +87,25 @@ export function makeWornHexGeometry(radius, depth, variant = 0) {
   const rand = randomFor(341 + variant * 917);
   const corners = Array.from({ length: 6 }, (_, i) => {
     const a = i * Math.PI / 3;
-    return [Math.sin(a) * radius, Math.cos(a) * radius];
+    let wear=.955+rand()*.043;
+    // Every family owns one or two unmistakably damaged corners. The top stays
+    // level and inside the logical hex, so movement and picking never change.
+    if(i===(variant*5+1)%6)wear=.78+rand()*.13;
+    if(variant%4===0&&i===(variant+4)%6)wear=.86+rand()*.08;
+    return [Math.sin(a)*radius*wear,Math.cos(a)*radius*wear];
   });
   const outline = [];
   for (let i = 0; i < 6; i++) {
     const a = corners[i], b = corners[(i + 1) % 6];
-    for (const t of [.045 + rand() * .04, .91 + rand() * .045]) {
-      const chip = .994 + rand() * .006;
-      outline.push([(a[0] + (b[0] - a[0]) * t) * chip, (a[1] + (b[1] - a[1]) * t) * chip]);
+    outline.push(a);
+    const notchEdge=i===(variant*7+2)%6;
+    for(const t of[.3+rand()*.08,.66+rand()*.08]){
+      const chip=notchEdge&&t>.5?.82+rand()*.08:.965+rand()*.03;
+      outline.push([(a[0]+(b[0]-a[0])*t)*chip,(a[1]+(b[1]-a[1])*t)*chip]);
     }
   }
   const positions = [], uvs = [], groups = [];
-  const angle = variant * Math.PI / 3, cs = Math.cos(angle), sn = Math.sin(angle);
+  const angle = variant * Math.PI / 9, cs = Math.cos(angle), sn = Math.sin(angle);
   const vertex = p => {
     positions.push(...p);
     uvs.push(.5 + (p[0] * cs - p[2] * sn) / radius * .5, .5 + (p[0] * sn + p[2] * cs) / radius * .5);
@@ -173,7 +180,7 @@ export function makeRuinFoundation(cells, worldFor, radius, maps) {
   const rubbleGeo = new THREE.DodecahedronGeometry(1, 0);
   const rubble = new THREE.InstancedMesh(rubbleGeo, material, sites.length * 4);
   const masonryGeo = new THREE.BoxGeometry(1, 1, 1);
-  const masonry = new THREE.InstancedMesh(masonryGeo, material, Math.ceil(sites.length / 4) * 5);
+  const masonry = new THREE.InstancedMesh(masonryGeo, material, sites.length * 8);
   let masonryCount = 0;
   sites.forEach((cell, i) => {
     const p = worldFor(`${cell.q},${cell.r}`), rand = randomFor(i * 913 + 94);
@@ -184,21 +191,45 @@ export function makeRuinFoundation(cells, worldFor, radius, maps) {
       rubble.setMatrixAt(i * 4 + j, dummy.matrix);
       rubble.setColorAt(i * 4 + j, color.setScalar(.75 + rand() * .5));
     }
-    if (i % 4) return;
-    const inward = Math.atan2(p.x, p.z);
-    const courses = 2 + Math.floor(rand() * 4);
-    for (let j = 0; j < courses; j++) {
-      const width = j === 0 ? .75 : j === 4 ? .43 : .48;
-      dummy.position.set(p.x + (j === 4 ? .07 : 0), .28 + j * .27, p.z);
-      dummy.rotation.set(j === 4 ? .12 : 0, inward + (rand() - .5) * .09, j === 4 ? .14 : 0);
-      dummy.scale.set(width, .24 + rand() * .03, width * .82); dummy.updateMatrix();
-      masonry.setMatrixAt(masonryCount, dummy.matrix);
-      masonry.setColorAt(masonryCount++, color.setScalar(.8 + rand() * .4));
+    if(i%2)return;
+    const facing=Math.atan2(p.x,p.z),style=i%4,towers=style===2?2:1;
+    for(let tower=0;tower<towers;tower++){
+      const courses=style===0?5+Math.floor(rand()*3):style===1?2+Math.floor(rand()*3):3+Math.floor(rand()*3);
+      const lateral=towers===2?(tower?1:-1)*.24:0;
+      for(let course=0;course<courses;course++){
+        const taper=1-course*.055,lean=style===3?course*.035:0;
+        const width=(style===0?.38:style===1?.66:.45)*taper;
+        dummy.position.set(p.x+Math.cos(facing)*lateral+Math.sin(facing)*lean,.27+course*(style===0?.34:.28),p.z-Math.sin(facing)*lateral+Math.cos(facing)*lean);
+        dummy.rotation.set(style===3?.035*course:0,facing+(rand()-.5)*.11,style===1&&course===courses-1?.14:0);
+        dummy.scale.set(width,style===0?.31:.25,width*(style===1?.76:.9));dummy.updateMatrix();
+        masonry.setMatrixAt(masonryCount,dummy.matrix);masonry.setColorAt(masonryCount++,color.setScalar(.72+rand()*.38));
+      }
     }
   });
   masonry.count = masonryCount;
   masonry.receiveShadow = rubble.receiveShadow = true;
   root.add(masonry, rubble);
+
+  // A few low-poly hanging chains sell the floating ruin silhouette. All links
+  // share one geometry/material and therefore remain a single draw call.
+  const mobile=matchMedia('(max-width: 900px), (pointer: coarse)').matches;
+  const chainRuns=Math.min(mobile?4:7,Math.floor(sites.length/3)),linksPerRun=mobile?7:11;
+  const chainGeometry=new THREE.TorusGeometry(.09,.022,4,7);
+  const chainMaterial=new THREE.MeshStandardMaterial({color:0x40352f,roughness:.68,metalness:.62});
+  const chains=new THREE.InstancedMesh(chainGeometry,chainMaterial,chainRuns*linksPerRun);
+  const ordered=sites.slice().sort((a,b)=>Math.atan2(worldFor(`${a.q},${a.r}`).z,worldFor(`${a.q},${a.r}`).x)-Math.atan2(worldFor(`${b.q},${b.r}`).z,worldFor(`${b.q},${b.r}`).x));
+  const localNormal=new THREE.Vector3(0,0,1),normal=new THREE.Vector3();let chainIndex=0;
+  for(let run=0;run<chainRuns;run++){
+    const startCell=ordered[Math.floor(run*ordered.length/chainRuns)],endCell=ordered[(Math.floor(run*ordered.length/chainRuns)+2)%ordered.length];
+    const start=worldFor(`${startCell.q},${startCell.r}`),end=worldFor(`${endCell.q},${endCell.r}`);
+    for(let link=0;link<linksPerRun;link++){
+      const t=link/(linksPerRun-1),x=THREE.MathUtils.lerp(start.x,end.x,t),z=THREE.MathUtils.lerp(start.z,end.z,t),length=Math.hypot(x,z)||1;
+      normal.set(link%2?-(end.z-start.z):x/length,0,link%2?(end.x-start.x):z/length).normalize();
+      dummy.position.set(x+x/length*.42,.05-Math.sin(t*Math.PI)*.95,z+z/length*.42);
+      dummy.quaternion.setFromUnitVectors(localNormal,normal);dummy.scale.setScalar(.9);dummy.updateMatrix();chains.setMatrixAt(chainIndex++,dummy.matrix);
+    }
+  }
+  chains.count=chainIndex;chains.instanceMatrix.needsUpdate=true;chains.castShadow=false;chains.receiveShadow=true;root.add(chains);
   return root;
 }
 

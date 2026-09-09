@@ -1,6 +1,18 @@
 # TABOK — True 3D Board Alpha
 
-Version: **v0.64.0 — Starfield Instrument · 2026.09.09.G1**
+Version: **v0.65.0 — Fractured Reliquary · 2026.09.09.H1**
+
+## v0.65.0 — Fractured Reliquary
+
+- Expanded the board from six to eighteen deterministic worn-tile families,
+  with asymmetrical corners, edge notches, rotated grain, and visibly different
+  chips while preserving every logical hex center and walkable top height.
+- Perimeter ruins now alternate between tall tapering monoliths, broken stumps,
+  twin columns, and leaning towers, with varied courses and rubble silhouettes.
+- Added sparse sagging low-poly iron chains beneath the fractured coast. Every
+  link is instanced into one draw call, and mobile uses fewer links and spans.
+- Distant ruin pillars now use four broken architectural profiles while retaining
+  their existing single instanced draw call.
 
 ## v0.64.0 — Starfield Instrument
 
