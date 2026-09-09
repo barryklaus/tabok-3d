@@ -193,9 +193,9 @@ test('Starpath removes replay, resolves automation authoritatively, shortens Por
  assert.match(multiplayer,/capacity:2/);
  assert.match(multiplayer,/hostSeat\.kind = 'human'/);
  assert.match(multiplayer,/mp-start-path/);
- assert.match(multiplayer,/mpPrimaryRoll/);
- assert.match(cosmic,/mobileMemoryProfile \? 2048 : 4096/);
- assert.match(cosmic,/for \(const offset of \[-width,0,width\]\)/);
+ assert.match(multiplayer,/function scheduleInitiativeRolls\(\)/);
+ assert.match(cosmic,/canvas\.width = mobile \? 1024 : 2048/);
+ assert.match(cosmic,/new THREE\.SphereGeometry\(62,mobile\?20:28,mobile\?12:16\)/);
  assert.match(cosmic,/LinearMipmapLinearFilter/);
 });
 
@@ -216,6 +216,24 @@ test('automatic Grand Plunder releases the post-movement treasure resolver',asyn
  assert.equal(c.actionRuns,1);assert.equal(turn.autoActionResolveState,'running');
 });
 
+test('Render Discipline reuses dice resources and removes invisible competing GPU work',()=>{
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ const board=fs.readFileSync(path.join(root,'true3d-board.js'),'utf8');
+ const dice=fs.readFileSync(path.join(root,'true3d-dice.js'),'utf8');
+ const bust=fs.readFileSync(path.join(root,'character-bust-preview.js'),'utf8');
+ assert.match(dice,/this\.dieResources = new Map\(\)/);
+ assert.match(dice,/signature===this\.preparedSignature&&this\.dice\.length===specs\.length/);
+ assert.match(dice,/scaled\.width=scaled\.height=256/);
+ assert.doesNotMatch(dice,/die\.geometry\.dispose\(\); die\.material\.forEach/);
+ assert.match(board,/this\.renderer\.shadowMap\.autoUpdate = false/);
+ assert.match(board,/setPresentationPaused\(paused\)/);
+ assert.match(board,/this\.portalDebrisMesh = new THREE\.InstancedMesh/);
+ assert.match(board,/this\.suspended \|\| this\.presentationPaused/);
+ assert.match(bust,/document\.hidden\|\|this\.presentationPaused/);
+ assert.match(html,/webglBoard\?\.setPresentationPaused\?\.\(paused\)/);
+ assert.match(html,/if\(physical\)pauseAmbient\(false\)/);
+});
+
 test('Gilded Fate uses reference-matched treasure art and engraved symbol dice',()=>{
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  const dice=fs.readFileSync(path.join(root,'true3d-dice.js'),'utf8');
@@ -224,7 +242,7 @@ test('Gilded Fate uses reference-matched treasure art and engraved symbol dice',
   assert.match(html,new RegExp(asset.replaceAll('.','\\.')));
   assert.ok(fs.existsSync(path.join(root,asset)),`${name} production icon must exist`);
  }
- assert.match(html,/v0\.62\.0 MOBILE ANCHOR/);
+ assert.match(html,/true3d-dice\.js\?v=20260909I1/);
  assert.match(dice,/Celestial face plate/);
  assert.match(dice,/new Path2D\('M86 28H426/);
  assert.match(dice,/context\.fillText\(String\(value\),256,264\)/);
@@ -239,7 +257,7 @@ test('Celestial Concord unifies notices and renders the sculpted Traveler bust',
  const board=fs.readFileSync(path.join(root,'true3d-board.js'),'utf8');
  const bust=fs.readFileSync(path.join(root,'character-bust-preview.js'),'utf8');
  const cosmic=fs.readFileSync(path.join(root,'cosmic-sanctuary.js'),'utf8');
- assert.match(html,/character-bust-preview\.js\?v=20260908E1/);
+ assert.match(html,/character-bust-preview\.js\?v=20260909I1/);
  assert.match(html,/character-bust-stage/);
  for(const selector of ['portal-judgment','rune-claim-fx','challenge-player-alert','portal-magic-words','actor-speech-bubble','impact-fx'])assert.match(css,new RegExp(selector));
  assert.match(css,/Celestial Concord/);
@@ -256,9 +274,8 @@ test('Mobile Anchor prevents Safari eviction, rejoins guests and restores full C
  const bust=fs.readFileSync(path.join(root,'character-bust-preview.js'),'utf8');
  const cosmic=fs.readFileSync(path.join(root,'cosmic-sanctuary.js'),'utf8');
  const ruin=fs.readFileSync(path.join(root,'ruin-board-art.js'),'utf8');
- assert.match(html,/v0\.62\.0 MOBILE ANCHOR/);
  assert.match(html,/Cinematic · highest quality/);
- assert.match(cosmic,/mobileMemoryProfile \? 2048 : 4096/);
+ assert.match(cosmic,/canvas\.width = mobile \? 1024 : 2048/);
  assert.match(ruin,/matches \? 256 : 512/);
  assert.match(bust,/this\.available=!matchMedia/);
  assert.match(multiplayer,/tabok-active-guest-room/);
@@ -267,6 +284,6 @@ test('Mobile Anchor prevents Safari eviction, rejoins guests and restores full C
  assert.match(board,/quality === 'auto' && !mobile \? 2048 : 1024/);
  assert.match(board,/quality === 'auto' && !mobile \? 6/);
  assert.match(board,/quality === 'full' \|\| quality === 'auto'/);
- assert.match(board,/shard\.visible=true/);
+ assert.match(board,/this\.portalDebrisMesh\.count = quality === 'full' \|\| quality === 'auto'/);
  assert.match(board,/webglcontextlost/);
 });

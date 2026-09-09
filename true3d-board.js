@@ -342,12 +342,14 @@ export class TabokTrue3DBoard {
     this.lastQualityCheckAt = this.lastFrameAt;
     this.qualityRecoveryChecks = 0;
     this.lastArcUpdateAt = 0;
+    this.lastDebrisUpdateAt = 0;
     this.lastActorModelUpdateAt = 0;
     this.lastSpeechUpdateAt = 0;
     this.reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.tabletProfile = matchMedia('(max-width:1180px) and (pointer:coarse)').matches;
     this.framingKey = '';
     this.suspended = document.hidden;
+    this.presentationPaused = document.documentElement.classList.contains('effects-paused');
     this.ready = this.init();
   }
 
@@ -362,6 +364,10 @@ export class TabokTrue3DBoard {
     this.renderer.toneMappingExposure = 1.34;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
+    // Nearly every shadow caster is fixed architecture. Render its depth map
+    // only when quality/context state changes instead of rebuilding it at 60 Hz.
+    this.renderer.shadowMap.autoUpdate = false;
+    this.renderer.shadowMap.needsUpdate = true;
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x050305);
@@ -403,6 +409,7 @@ export class TabokTrue3DBoard {
       this.suspended = document.hidden;
       this.lastFrameAt = performance.now();
       this.frameTimes.length = 0;
+      this.renderer.shadowMap.needsUpdate = true;
       document.documentElement.classList.remove('gpu-context-lost');
       document.documentElement.classList.remove('board-plate-mode');
       document.documentElement.classList.add('true3d-active');
@@ -787,16 +794,17 @@ export class TabokTrue3DBoard {
     const debrisGeometry = new THREE.DodecahedronGeometry(.1, 0);
     const debrisMaterial = new THREE.MeshStandardMaterial({ color: 0x19121c, emissive: 0x501173, emissiveIntensity: .28, roughness: .94 });
     for (let i = 0; i < 12; i++) {
-      const shard = new THREE.Mesh(debrisGeometry, debrisMaterial);
-      shard.scale.setScalar(.55 + (i % 4) * .24);
-      shard.userData.portalDebris = {
+      this.portalDebris.push({
         angle: i / 12 * Math.PI * 2, radius: 1.18 + (i % 5) * .13,
         speed: (i % 2 ? -.13 : .17) * (1 + (i % 3) * .12),
-        height: .72 + (i % 4) * .16, phase: i * 1.71
-      };
-      this.portal.add(shard);
-      this.portalDebris.push(shard);
+        height: .72 + (i % 4) * .16, phase: i * 1.71,
+        scale: .55 + (i % 4) * .24
+      });
     }
+    this.portalDebrisMesh = new THREE.InstancedMesh(debrisGeometry, debrisMaterial, this.portalDebris.length);
+    this.portalDebrisMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.portalDebrisDummy = new THREE.Object3D();
+    this.portal.add(this.portalDebrisMesh);
 
     this.portalLight = new THREE.PointLight(0xb345ff, 16, 7, 2);
     this.portalLight.position.y = 1.35;
@@ -940,7 +948,10 @@ export class TabokTrue3DBoard {
     }
     group.traverse(node => {
       if (!node.isMesh) return;
-      node.castShadow = node.receiveShadow = true;
+      // These pieces are tiny, emissive focal points. Their moving shadow-map
+      // contribution is invisible at play distance, so keep only receiving.
+      node.castShadow = false;
+      node.receiveShadow = true;
     });
     group.rotation.y = -.24;
     group.userData.equipment = true;
@@ -970,7 +981,7 @@ export class TabokTrue3DBoard {
       new THREE.LineBasicMaterial({ color: 0xe4b8ff, transparent: true, opacity: .82 })
     );
     group.add(stone, inner, edges);
-    group.traverse(node => { if (node.isMesh) node.castShadow = node.receiveShadow = true; });
+    group.traverse(node => { if (node.isMesh) { node.castShadow = false; node.receiveShadow = true; } });
     group.userData.rune = true;
     return group;
   }
@@ -1194,6 +1205,14 @@ export class TabokTrue3DBoard {
 
   setPortalState(state) { this.portalState = state || 'idle'; }
 
+  setPresentationPaused(paused) {
+    this.presentationPaused = Boolean(paused);
+    if (!this.presentationPaused) {
+      this.lastFrameAt = performance.now();
+      this.frameTimes.length = 0;
+    }
+  }
+
   playPortalEvent(event) {
     if (!this.cinematics) this.cinematics = new PortalCinematics(this, worldFor, disposeObject);
     return this.cinematics.play(event);
@@ -1219,6 +1238,7 @@ export class TabokTrue3DBoard {
     this.qualityRecoveryChecks = 0;
     document.documentElement.dataset.renderScale = String(this.renderRatio);
     this.renderer.shadowMap.enabled = quality !== 'ultra' && quality !== 'lite';
+    this.renderer.shadowMap.needsUpdate = this.renderer.shadowMap.enabled;
     this.actorRoot.traverse(node => {
       if (node.userData.actorModelMesh) node.castShadow = false;
     });
@@ -1239,6 +1259,7 @@ export class TabokTrue3DBoard {
     this.portalArcs?.forEach((arc, index) => {
       arc.visible = quality === 'full' || quality === 'auto' || index % 2 === 0;
     });
+    if (this.portalDebrisMesh) this.portalDebrisMesh.count = quality === 'full' || quality === 'auto' ? this.portalDebris.length : Math.ceil(this.portalDebris.length / 2);
     if (this.portalCapMaterial) {
       this.portalCapMaterial.displacementScale = quality === 'ultra' ? .035 : quality === 'lite' ? .065 : .105;
       this.portalCapMaterial.bumpScale = quality === 'ultra' ? .035 : .075;
@@ -1442,7 +1463,7 @@ export class TabokTrue3DBoard {
 
   render() {
     const now = performance.now();
-    if (this.suspended) return;
+    if (this.suspended || this.presentationPaused) return;
     this.tuneResolution(now);
     const time = (now - this.startedAt) / 1000;
     this.cosmicSanctuary?.update(time, this.quality, this.reducedMotion);
@@ -1515,13 +1536,18 @@ export class TabokTrue3DBoard {
     this.portalCapMaterial.emissiveIntensity = .045 + look[1] * .055 + Math.sin(time * 1.7) * .02;
     this.portalRunes.rotation.z = time * .025;
     this.portalMist.rotation.z = -time * .055;
-    this.portalDebris.forEach((shard, index) => {
-      shard.visible=true;
-      if(!shard.visible)return;
-      const data = shard.userData.portalDebris, angle = data.angle + time * data.speed;
-      shard.position.set(Math.sin(angle) * data.radius, data.height + Math.sin(time * 1.35 + data.phase) * .13, Math.cos(angle) * data.radius);
-      shard.rotation.set(time * (.18 + index * .007), time * (.25 - index * .005), time * .12);
-    });
+    const debrisInterval = this.quality === 'full' || this.quality === 'auto' ? 1000 / 30 : 1000 / 20;
+    if (this.portalDebrisMesh && now - this.lastDebrisUpdateAt >= debrisInterval) {
+      const count = this.portalDebrisMesh.count;
+      for (let index = 0; index < count; index++) {
+        const data = this.portalDebris[index], angle = data.angle + time * data.speed, shard = this.portalDebrisDummy;
+        shard.position.set(Math.sin(angle) * data.radius, data.height + Math.sin(time * 1.35 + data.phase) * .13, Math.cos(angle) * data.radius);
+        shard.rotation.set(time * (.18 + index * .007), time * (.25 - index * .005), time * .12);
+        shard.scale.setScalar(data.scale);shard.updateMatrix();this.portalDebrisMesh.setMatrixAt(index, shard.matrix);
+      }
+      this.portalDebrisMesh.instanceMatrix.needsUpdate = true;
+      this.lastDebrisUpdateAt = now;
+    }
     this.itemRoot.children.forEach((item, index) => {
       if (item.userData.rune) {
         item.rotation.y = time * .72 + index;

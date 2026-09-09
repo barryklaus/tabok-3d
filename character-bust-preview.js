@@ -30,7 +30,7 @@ export class TabokBustPreview {
     this.scene.add(new THREE.HemisphereLight(0xf0d9ad,0x100b13,2.15));
     const key=new THREE.DirectionalLight(0xffd796,4.8);key.position.set(-3,5,5);this.scene.add(key);
     const rim=new THREE.DirectionalLight(0x7c56a8,3.2);rim.position.set(4,3,-3);this.scene.add(rim);
-    this.clock=new THREE.Clock();this.visible=false;this.lastFrame=0;this.boundFrame=now=>this.frame(now);
+    this.clock=new THREE.Clock();this.visible=false;this.presentationPaused=document.documentElement.classList.contains('effects-paused');this.lastFrame=0;this.boundFrame=now=>this.frame(now);
     this.observer=new IntersectionObserver(entries=>{this.visible=Boolean(entries[0]?.isIntersecting);if(this.visible)this.requestFrame()},{threshold:.05});
   }
 
@@ -48,6 +48,8 @@ export class TabokBustPreview {
   }
 
   hide(){this.visible=false}
+
+  setPresentationPaused(paused){this.presentationPaused=Boolean(paused);if(!this.presentationPaused&&this.visible)this.requestFrame()}
 
   resize(){
     const rect=this.canvas.parentElement?.getBoundingClientRect();if(!rect)return;
@@ -74,10 +76,10 @@ export class TabokBustPreview {
   requestFrame(){if(!this.frameRequest)this.frameRequest=requestAnimationFrame(this.boundFrame)}
 
   frame(now){
-    this.frameRequest=0;if(!this.visible||!this.model||document.hidden)return;
+    this.frameRequest=0;if(!this.visible||!this.model||document.hidden||this.presentationPaused)return;
     // The bust is intentionally capped at 15 fps. At this small size it still
     // reads as alive while leaving the main 3D board nearly the full GPU budget.
-    if(now-this.lastFrame>=66){this.lastFrame=now;if(!document.documentElement.classList.contains('effects-paused'))this.model.userData.update?.(this.clock.getElapsedTime());this.renderer.render(this.scene,this.camera)}
+    if(now-this.lastFrame>=66){this.lastFrame=now;this.model.userData.update?.(this.clock.getElapsedTime());this.renderer.render(this.scene,this.camera)}
     this.requestFrame();
   }
 

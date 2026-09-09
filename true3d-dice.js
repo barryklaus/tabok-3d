@@ -137,10 +137,12 @@ function faceTexture(label, kind, faceIndex = 0) {
   };
 
   if (movement) drawMovement(Number(label)); else if (rune) drawRune(label); else drawAction(label);
-  const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace; texture.anisotropy = 8;
+  const mobileUpload=matchMedia('(max-width:900px), (pointer:coarse)').matches;
+  const uploadCanvas=source=>{if(!mobileUpload)return source;const scaled=document.createElement('canvas');scaled.width=scaled.height=256;scaled.getContext('2d').drawImage(source,0,0,256,256);return scaled};
+  const texture = new THREE.CanvasTexture(uploadCanvas(canvas)); texture.colorSpace = THREE.SRGBColorSpace; texture.anisotropy = 8;
   const glowCanvas=document.createElement('canvas');glowCanvas.width=glowCanvas.height=512;const glowContext=glowCanvas.getContext('2d'),source=context.getImageData(0,0,512,512),mask=glowContext.createImageData(512,512);
   for(let y=78;y<434;y++)for(let x=78;x<434;x++){const i=(y*512+x)*4,luma=source.data[i]*.2126+source.data[i+1]*.7152+source.data[i+2]*.0722;if(luma>145){const value=Math.min(255,Math.max(0,(luma-145)*2.35));mask.data[i]=mask.data[i+1]=mask.data[i+2]=value;mask.data[i+3]=255}}
-  glowContext.putImageData(mask,0,0);const emissiveMap=new THREE.CanvasTexture(glowCanvas);emissiveMap.colorSpace=THREE.SRGBColorSpace;emissiveMap.anisotropy=8;
+  glowContext.putImageData(mask,0,0);const emissiveMap=new THREE.CanvasTexture(uploadCanvas(glowCanvas));emissiveMap.colorSpace=THREE.SRGBColorSpace;emissiveMap.anisotropy=8;
   return {texture,emissiveMap};
 }
 
@@ -165,6 +167,9 @@ export class TabokDice3D {
     this.scene.add(new THREE.HemisphereLight(0xbda8ff, 0x1a0c05, 2.1));
     this.key = new THREE.SpotLight(0xffd895, 58, 25, Math.PI / 4, .48, 1.4); this.key.position.set(-3, 7, 5); this.key.castShadow = true; this.scene.add(this.key);
     const violet = new THREE.PointLight(0xa249ff, 28, 12, 2); violet.position.set(4, 2, 2); this.scene.add(violet);
+    this.dieGeometry = new RoundedBoxGeometry(2.05, 2.05, 2.05, 5, .24);
+    this.dieResources = new Map();
+    this.preparedSignature = '';
     this.makeTray(); this.dice = [];
     this.resizeObserver = new ResizeObserver(() => this.resize()); this.resizeObserver.observe(this.canvas); this.resize();
   }
@@ -200,11 +205,15 @@ export class TabokDice3D {
   }
 
   clearDice() {
-    this.dice.forEach(die => { this.scene.remove(die); die.geometry.dispose(); die.material.forEach(material => { material.map?.dispose(); material.emissiveMap?.dispose(); material.dispose(); }); });
+    // Geometry, face textures and shader-ready materials are deliberately
+    // retained. Rebuilding up to 36 large GPU textures every cast caused the
+    // visible hitch at the beginning of a roll.
+    this.dice.forEach(die => this.scene.remove(die));
     this.dice = [];
   }
 
-  buildDice(kind, x) {
+  dieResource(kind) {
+    if (this.dieResources.has(kind)) return this.dieResources.get(kind);
     const labels = FACE_SETS[kind];
     const materials = labels.map((label, faceIndex) => {
       const {texture,emissiveMap} = faceTexture(label, kind, faceIndex);
@@ -213,16 +222,28 @@ export class TabokDice3D {
         color: 0xffffff, roughness: .62, metalness: .22
       });
     });
-    const die = new THREE.Mesh(new RoundedBoxGeometry(2.05, 2.05, 2.05, 5, .24), materials);
-    die.position.set(x, 1.05, 0); die.castShadow = true; die.receiveShadow = true; die.userData = { kind, labels };
+    const resource = {labels,materials};this.dieResources.set(kind,resource);return resource;
+  }
+
+  buildDice(kind, x) {
+    const {labels,materials} = this.dieResource(kind);
+    materials.forEach(material=>{material.emissive.set(0x000000);material.emissiveIntensity=0});
+    const die = new THREE.Mesh(this.dieGeometry, materials);
+    die.position.set(x, 1.05, 0); die.scale.setScalar(1);die.rotation.set(0,0,0);die.castShadow = true; die.receiveShadow = true; die.userData = { kind, labels };
     this.scene.add(die); this.dice.push(die); return die;
   }
 
   prepare(specs, color = '#9d62d4') {
     if (!this.supports(specs)) return false;
+    const signature=specs.map(spec=>spec.label).join('|');
+    if(signature===this.preparedSignature&&this.dice.length===specs.length){
+      this.dice.forEach(die=>die.material.forEach(material=>{material.emissive.set(0x000000);material.emissiveIntensity=0}));
+      this.key.color.set(color);this.canvas.dataset.diceCount=String(specs.length);this.canvas.classList.add('active');this.resize();return true;
+    }
     this.clearDice(); this.key.color.set(color);
     const positions = specs.length === 3 ? [-2.45,0,2.45] : specs.length === 2 ? [-1.45,1.45] : [0];
     specs.forEach((spec,index) => this.buildDice(spec.label,positions[index]));
+    this.preparedSignature=signature;
     this.canvas.dataset.diceCount=String(specs.length); this.canvas.classList.add('active'); this.resize(); return true;
   }
 

@@ -1,6 +1,21 @@
 # TABOK — True 3D Board Alpha
 
-Version: **v0.65.2 — Plunder Resolver · 2026.09.09.H3**
+Version: **v0.66.0 — Render Discipline · 2026.09.09.I1**
+
+## v0.66.0 — Render Discipline
+
+- Physical dice now retain their geometry, materials, face maps, and emissive
+  maps between casts. The prepared turn dice are reused by the roll itself,
+  removing the largest allocation/upload hitch at the start of each throw.
+- Mobile dice upload 256 px face maps while desktop keeps 512 px faces, reducing
+  the secondary WebGL context's dice-texture memory by roughly 75% on phones and
+  tablets without reducing their visible on-screen detail.
+- The board and live sculpted portrait renderers now sleep behind the opaque 3D
+  dice presentation, then resume with clean frame timing after it closes.
+- Static ruin shadows are rendered on demand rather than rebuilt every frame;
+  tiny rotating equipment no longer dirties the architectural shadow pass.
+- Twelve individually animated Portal debris meshes are now one dynamic
+  instanced mesh, retaining all Cinematic debris with one draw submission.
 
 ## v0.65.2 — Plunder Resolver
 
