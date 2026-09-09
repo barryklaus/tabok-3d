@@ -199,6 +199,23 @@ test('Starpath removes replay, resolves automation authoritatively, shortens Por
  assert.match(cosmic,/LinearMipmapLinearFilter/);
 });
 
+test('automatic Grand Plunder releases the post-movement treasure resolver',async()=>{
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+ const source=['queueAutomatedTreasureAction','queueAutomatedPlunder','finishMovement'].map(name=>html.split('\n').find(line=>line.includes('function '+name+'('))?.trim()).join('\n');
+ assert.ok(!source.includes('undefined'),'automation functions must remain available to the engine');
+ const turn={runePower:'PLUNDER',autoResolveState:'running'},player={inventory:[0,0,0]},target={inventory:[1,0,0]};
+ const c={game:{phase:'rune',turn},actionAutoTimer:null,busy:false,plunderRuns:0,actionRuns:0,setTimeout,clearTimeout,
+  timing:()=>0,automationAuthority:()=>true,active:()=>player,runePlunderTargets:()=>[target],plunderRequired:()=>1,
+  chooseCPUPlunder:()=>[0],resolveRunePlunder:()=>{c.plunderRuns++},finishRunePower(){},clearLegal(){},renderAll(){},cpuAction(){c.actionRuns++}};
+ vm.createContext(c);vm.runInContext(source,c);
+ vm.runInContext('queueAutomatedPlunder()',c);await new Promise(resolve=>setTimeout(resolve,10));
+ assert.equal(c.plunderRuns,1);assert.equal(turn.autoPlunderResolveState,'running');
+ await vm.runInContext('finishMovement()',c);
+ assert.equal(c.game.phase,'action');assert.equal(turn.autoPlunderResolveState,undefined);assert.equal(turn.autoResolveState,undefined);
+ vm.runInContext('queueAutomatedTreasureAction()',c);await new Promise(resolve=>setTimeout(resolve,10));
+ assert.equal(c.actionRuns,1);assert.equal(turn.autoActionResolveState,'running');
+});
+
 test('Gilded Fate uses reference-matched treasure art and engraved symbol dice',()=>{
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
  const dice=fs.readFileSync(path.join(root,'true3d-dice.js'),'utf8');

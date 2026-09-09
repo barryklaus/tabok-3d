@@ -1,6 +1,16 @@
 # TABOK — True 3D Board Alpha
 
-Version: **v0.65.1 — Restored Hexes · 2026.09.09.H2**
+Version: **v0.65.2 — Plunder Resolver · 2026.09.09.H3**
+
+## v0.65.2 — Plunder Resolver
+
+- Fixed automatic Grand Plunder leaving its resolver lock active after movement,
+  which prevented the following TAKE, GIVE, or STEAL action from starting.
+- Rune and normal treasure automation now use separate phase guards. Legacy
+  resolver state is cleared at both phase boundaries so interrupted live games
+  can recover instead of remaining on “resolving.”
+- Only the authoritative host now marks an automatic choice as queued, avoiding
+  non-host clients carrying a resolver state they are not allowed to execute.
 
 ## v0.65.1 — Restored Hexes
 
