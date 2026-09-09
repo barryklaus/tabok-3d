@@ -1,6 +1,12 @@
 # TABOK — True 3D Board Alpha
 
-Version: **v0.65.0 — Fractured Reliquary · 2026.09.09.H1**
+Version: **v0.65.1 — Restored Hexes · 2026.09.09.H2**
+
+## v0.65.1 — Restored Hexes
+
+- Restored the board tiles to their previous six subtle worn-hex families.
+- Retained the new varied perimeter pillars, rubble silhouettes, hanging chains,
+  and three-depth starfield from the Fractured Reliquary update.
 
 ## v0.65.0 — Fractured Reliquary
 

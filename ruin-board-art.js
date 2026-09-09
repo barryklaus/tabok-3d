@@ -87,25 +87,18 @@ export function makeWornHexGeometry(radius, depth, variant = 0) {
   const rand = randomFor(341 + variant * 917);
   const corners = Array.from({ length: 6 }, (_, i) => {
     const a = i * Math.PI / 3;
-    let wear=.955+rand()*.043;
-    // Every family owns one or two unmistakably damaged corners. The top stays
-    // level and inside the logical hex, so movement and picking never change.
-    if(i===(variant*5+1)%6)wear=.78+rand()*.13;
-    if(variant%4===0&&i===(variant+4)%6)wear=.86+rand()*.08;
-    return [Math.sin(a)*radius*wear,Math.cos(a)*radius*wear];
+    return [Math.sin(a) * radius, Math.cos(a) * radius];
   });
   const outline = [];
   for (let i = 0; i < 6; i++) {
     const a = corners[i], b = corners[(i + 1) % 6];
-    outline.push(a);
-    const notchEdge=i===(variant*7+2)%6;
-    for(const t of[.3+rand()*.08,.66+rand()*.08]){
-      const chip=notchEdge&&t>.5?.82+rand()*.08:.965+rand()*.03;
-      outline.push([(a[0]+(b[0]-a[0])*t)*chip,(a[1]+(b[1]-a[1])*t)*chip]);
+    for (const t of [.045 + rand() * .04, .91 + rand() * .045]) {
+      const chip = .994 + rand() * .006;
+      outline.push([(a[0] + (b[0] - a[0]) * t) * chip, (a[1] + (b[1] - a[1]) * t) * chip]);
     }
   }
   const positions = [], uvs = [], groups = [];
-  const angle = variant * Math.PI / 9, cs = Math.cos(angle), sn = Math.sin(angle);
+  const angle = variant * Math.PI / 3, cs = Math.cos(angle), sn = Math.sin(angle);
   const vertex = p => {
     positions.push(...p);
     uvs.push(.5 + (p[0] * cs - p[2] * sn) / radius * .5, .5 + (p[0] * sn + p[2] * cs) / radius * .5);
